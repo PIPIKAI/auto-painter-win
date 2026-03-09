@@ -1,14 +1,17 @@
 """
 主窗口
 """
+import os
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout,
-    QSplitter, QAction, QActionGroup, QMessageBox
+    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
+    QSplitter, QAction, QActionGroup, QMessageBox, QSystemTrayIcon, QStyle
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
 
 from ui.control_panel import ControlPanel
 from ui.preview_panel import PreviewPanel
+from ui.history_manager import HistoryPanel
 from ui.styles import GLOBAL_STYLE
 from ui.i18n import i18n
 
@@ -19,10 +22,13 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1100, 700)
         self.resize(1280, 800)
         self.setStyleSheet(GLOBAL_STYLE)
+        self._tray_icon = None
+        self._last_tray_progress = -10
 
         self._init_menubar()
         self._init_ui()
         self._init_statusbar()
+        self._init_tray()
 
         # 监听语言变化
         i18n.language_changed.connect(self._retranslate)
@@ -86,11 +92,21 @@ class MainWindow(QMainWindow):
         splitter = QSplitter(Qt.Horizontal)
 
         self.control_panel = ControlPanel()
-        self.control_panel.setFixedWidth(300)
+        self.control_panel.setFixedWidth(320)
         splitter.addWidget(self.control_panel)
 
+        right_container = QWidget()
+        right_layout = QVBoxLayout(right_container)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(8)
+
         self.preview_panel = PreviewPanel()
-        splitter.addWidget(self.preview_panel)
+        right_layout.addWidget(self.preview_panel, 1)
+
+        self.history_panel = HistoryPanel()
+        right_layout.addWidget(self.history_panel, 0)
+
+        splitter.addWidget(right_container)
 
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
@@ -104,9 +120,27 @@ class MainWindow(QMainWindow):
         self.control_panel.sketch_generated.connect(self.preview_panel.set_sketch_image)
         self.control_panel.painting_progress.connect(self._update_progress)
         self.control_panel.status_message.connect(self._update_status)
+        self.control_panel.history_entry.connect(self.history_panel.add_entry)
+
+        self.history_panel.sketch_loaded.connect(self._on_history_loaded)
+        self.history_panel.sketch_paint.connect(self._on_history_paint)
+        self.history_panel.status_message.connect(self._update_status)
 
     def _init_statusbar(self):
         self.statusBar()
+
+    def _init_tray(self):
+        icon_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "LOGO.ico")
+        if os.path.exists(icon_path):
+            icon = QIcon(icon_path)
+        else:
+            icon = self.style().standardIcon(QStyle.SP_ComputerIcon)
+        self.setWindowIcon(icon)
+
+        if QSystemTrayIcon.isSystemTrayAvailable():
+            self._tray_icon = QSystemTrayIcon(icon, self)
+            self._tray_icon.setToolTip(i18n.t("app_title"))
+            self._tray_icon.setVisible(True)
 
     # ──────────── 翻译刷新 ────────────
 
@@ -129,13 +163,36 @@ class MainWindow(QMainWindow):
         # 状态栏
         self.statusBar().showMessage(i18n.t("status_ready"))
 
+        if self._tray_icon:
+            self._tray_icon.setToolTip(i18n.t("app_title"))
+
     # ──────────── 事件处理 ────────────
 
     def _update_progress(self, value):
         self.statusBar().showMessage(i18n.t("status_painting_progress", value))
+        self._show_tray_progress(value)
+
+    def _show_tray_progress(self, value: int):
+        if not self._tray_icon or not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+        if value < 0 or (value - self._last_tray_progress < 5 and value != 100):
+            return
+        self._last_tray_progress = value
+        self._tray_icon.showMessage(
+            self.windowTitle(),
+            i18n.t("status_painting_progress", value),
+            QSystemTrayIcon.Information,
+            3000
+        )
 
     def _update_status(self, message):
         self.statusBar().showMessage(message)
+
+    def _on_history_loaded(self, path: str):
+        self.control_panel.load_sketch_from_history(path)
+
+    def _on_history_paint(self, path: str):
+        self.control_panel.load_sketch_from_history(path, auto_start=True)
 
     def _on_open_image(self):
         self.control_panel._on_select_image()

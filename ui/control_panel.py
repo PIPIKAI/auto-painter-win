@@ -1,14 +1,17 @@
 """
 左侧控制面板 - 包含所有操作按钮和参数调整
 """
+import os
+
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
     QPushButton, QLabel, QSlider, QComboBox,
     QFileDialog, QSpinBox, QCheckBox, QProgressBar,
-    QScrollArea, QFrame, QRadioButton, QButtonGroup
+    QScrollArea, QFrame, QRadioButton, QButtonGroup,
+    QKeySequenceEdit, QShortcut
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QThread, QTimer
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QKeySequence
 
 from ui.i18n import i18n
 from core.sketch_generator import SketchGenerator
@@ -101,6 +104,7 @@ class ControlPanel(QWidget):
         self._sketch_worker = None
         self._paint_worker = None
         self._paint_mode = "sketch"  # "sketch" 或 "text"
+        self._start_shortcut = None
 
         self._debounce_timer = QTimer(self)
         self._debounce_timer.setSingleShot(True)
@@ -319,6 +323,48 @@ class ControlPanel(QWidget):
         self.slider_scale.valueChanged.connect(
             lambda v: self.lbl_scale_val.setText(f"{v}%")
         )
+        # 热键配置
+        self.grp_hotkeys = QGroupBox()
+        hotkey_layout = QVBoxLayout()
+
+        self.lbl_start_hotkey = QLabel()
+        row_hot_start = QHBoxLayout()
+        row_hot_start.addWidget(self.lbl_start_hotkey)
+        self.key_start = QKeySequenceEdit(QKeySequence("F5"))
+        self.key_start.setMaximumWidth(140)
+        row_hot_start.addStretch()
+        row_hot_start.addWidget(self.key_start)
+        hotkey_layout.addLayout(row_hot_start)
+
+        self.lbl_calib_start = QLabel()
+        row_hot_c1 = QHBoxLayout()
+        row_hot_c1.addWidget(self.lbl_calib_start)
+        self.key_calib_start = QKeySequenceEdit(QKeySequence("F7"))
+        self.key_calib_start.setMaximumWidth(140)
+        row_hot_c1.addStretch()
+        row_hot_c1.addWidget(self.key_calib_start)
+        hotkey_layout.addLayout(row_hot_c1)
+
+        self.lbl_calib_end = QLabel()
+        row_hot_c2 = QHBoxLayout()
+        row_hot_c2.addWidget(self.lbl_calib_end)
+        self.key_calib_end = QKeySequenceEdit(QKeySequence("F8"))
+        self.key_calib_end.setMaximumWidth(140)
+        row_hot_c2.addStretch()
+        row_hot_c2.addWidget(self.key_calib_end)
+        hotkey_layout.addLayout(row_hot_c2)
+
+        self.lbl_abort_hotkey = QLabel()
+        row_hot_abort = QHBoxLayout()
+        row_hot_abort.addWidget(self.lbl_abort_hotkey)
+        self.key_abort = QKeySequenceEdit(QKeySequence("Esc"))
+        self.key_abort.setMaximumWidth(140)
+        row_hot_abort.addStretch()
+        row_hot_abort.addWidget(self.key_abort)
+        hotkey_layout.addLayout(row_hot_abort)
+
+        self.grp_hotkeys.setLayout(hotkey_layout)
+        paint_layout.addWidget(self.grp_hotkeys)
 
         # 进度条
         self.progress_bar = QProgressBar()
@@ -343,6 +389,11 @@ class ControlPanel(QWidget):
 
         self.grp_paint.setLayout(paint_layout)
         layout.addWidget(self.grp_paint)
+
+        # 热键刷新
+        for editor in (self.key_start, self.key_calib_start, self.key_calib_end, self.key_abort):
+            editor.keySequenceChanged.connect(lambda _seq: self._refresh_hotkeys())
+        self._refresh_hotkeys()
 
         layout.addStretch()
         scroll.setWidget(container)
@@ -396,6 +447,11 @@ class ControlPanel(QWidget):
         self.lbl_delay.setText(i18n.t("lbl_delay"))
         self.spin_delay.setSuffix(i18n.t("suffix_seconds"))
         self.lbl_scale.setText(i18n.t("lbl_scale"))
+        self.grp_hotkeys.setTitle(i18n.t("group_hotkeys"))
+        self.lbl_start_hotkey.setText(i18n.t("lbl_start_hotkey"))
+        self.lbl_calib_start.setText(i18n.t("lbl_calib_start"))
+        self.lbl_calib_end.setText(i18n.t("lbl_calib_end"))
+        self.lbl_abort_hotkey.setText(i18n.t("lbl_abort_hotkey"))
         self.btn_start_paint.setText(i18n.t("btn_start_paint"))
         self.btn_stop_paint.setText(i18n.t("btn_stop_paint"))
 
@@ -410,11 +466,46 @@ class ControlPanel(QWidget):
             self._paint_mode = "text"
             self.text_panel.setVisible(True)
 
+    def _refresh_hotkeys(self):
+        seq = self.key_start.keySequence()
+        if self._start_shortcut:
+            try:
+                self._start_shortcut.activated.disconnect()
+            except Exception:
+                pass
+            self._start_shortcut.setKey(QKeySequence())
+            self._start_shortcut.deleteLater()
+            self._start_shortcut = None
+
+        if not seq.isEmpty():
+            self._start_shortcut = QShortcut(seq, self)
+            self._start_shortcut.activated.connect(self._on_start_painting)
+
+    def _hotkey_value(self, editor: QKeySequenceEdit, fallback: str) -> str:
+        seq = editor.keySequence()
+        if seq.isEmpty():
+            return fallback
+        # keyboard 库使用小写，且去掉空格
+        return seq.toString().replace(" ", "").lower() or fallback
+
     def _on_text_rendered(self, path: str):
         """写字模式下，文字渲染完成后当作线稿数据"""
         self._sketch_data = path
         self.btn_start_paint.setEnabled(True)
         self.sketch_generated.emit(path)
+        self.status_message.emit(i18n.t("status_generate_done"))
+
+    def load_sketch_from_history(self, path: str, auto_start: bool = False):
+        """从历史记录加载线稿，并可选择直接开始绘画。"""
+        if not path or not os.path.exists(path):
+            return
+        self._sketch_data = path
+        self.btn_save.setEnabled(True)
+        self.btn_start_paint.setEnabled(True)
+        self.sketch_generated.emit(path)
+        self.status_message.emit(i18n.t("history_loaded"))
+        if auto_start:
+            self._on_start_painting()
 
     # ──────────── 参数变化防抖 ────────────
 
@@ -520,6 +611,8 @@ class ControlPanel(QWidget):
     def _on_start_painting(self):
         if not self._sketch_data:
             return
+        if self._paint_worker and self._paint_worker.isRunning():
+            return
     
 
         paint_params = {
@@ -527,6 +620,9 @@ class ControlPanel(QWidget):
             "delay": self.spin_delay.value(),
             "scale": self.slider_scale.value() / 100.0,
             "mode": self._paint_mode,
+            "calibrate_start_key": self._hotkey_value(self.key_calib_start, "f7"),
+            "calibrate_end_key": self._hotkey_value(self.key_calib_end, "f8"),
+            "abort_key": self._hotkey_value(self.key_abort, "esc"),
         }
 
         self.btn_start_paint.setEnabled(False)

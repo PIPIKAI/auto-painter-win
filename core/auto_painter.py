@@ -27,8 +27,8 @@ class PainterConfig:
     bridge_max_dist_px: int = 15
     simplify_eps: float = 0.5
     point_stride: int = 1
-    calibrate_start_key: str = "f8"
-    calibrate_end_key: str = "f9"
+    calibrate_start_key: str = "f7"
+    calibrate_end_key: str = "f8"
     abort_key: str = "esc"
 
     @staticmethod
@@ -51,6 +51,9 @@ class PainterConfig:
             # 允许 0 表示立即开始，由 _sleep_with_cancel 内部短路处理
             start_delay_sec=max(0.0, float(params.get("delay", 0))),
             canvas_scale=max(0.1, min(2.0, float(params.get("scale", 1.0)))),
+            calibrate_start_key=str(params.get("calibrate_start_key", cls.calibrate_start_key)).lower(),
+            calibrate_end_key=str(params.get("calibrate_end_key", cls.calibrate_end_key)).lower(),
+            abort_key=str(params.get("abort_key", cls.abort_key)).lower(),
         )
 
 

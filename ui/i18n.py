@@ -89,6 +89,11 @@ TRANSLATIONS = {
         "lbl_delay": "起笔延迟 (秒):",
         "suffix_seconds": " 秒",
         "lbl_scale": "画布缩放:",
+        "group_hotkeys": "⌨️ 热键设置",
+        "lbl_start_hotkey": "开始绘画:",
+        "lbl_calib_start": "记录左上角:",
+        "lbl_calib_end": "记录右下角:",
+        "lbl_abort_hotkey": "停止/中断:",
         "btn_start_paint": "▶ 开始绘画",
         "btn_stop_paint": "⏹ 停止",
 
@@ -216,6 +221,11 @@ TRANSLATIONS = {
         "lbl_delay": "Start Delay (sec):",
         "suffix_seconds": " sec",
         "lbl_scale": "Canvas Scale:",
+        "group_hotkeys": "⌨️ Hotkeys",
+        "lbl_start_hotkey": "Start painting:",
+        "lbl_calib_start": "Mark top-left:",
+        "lbl_calib_end": "Mark bottom-right:",
+        "lbl_abort_hotkey": "Abort/stop:",
         "btn_start_paint": "▶ Start Painting",
         "btn_stop_paint": "⏹ Stop",
 
