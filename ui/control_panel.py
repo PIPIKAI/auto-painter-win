@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QFileDialog, QSpinBox, QCheckBox, QProgressBar,
     QScrollArea, QFrame, QRadioButton, QButtonGroup
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QThread
+from PyQt5.QtCore import Qt, pyqtSignal, QThread, QTimer
 from PyQt5.QtGui import QPixmap
 
 from ui.i18n import i18n
@@ -92,8 +92,13 @@ class ControlPanel(QWidget):
         super().__init__()
         self._image_path = None
         self._sketch_data = None
+        self._sketch_worker = None
         self._paint_worker = None
         self._paint_mode = "sketch"  # "sketch" 或 "text"
+
+        self._debounce_timer = QTimer(self)
+        self._debounce_timer.setSingleShot(True)
+        self._debounce_timer.timeout.connect(self._on_generate)
 
         self._init_ui()
         i18n.language_changed.connect(self._retranslate)
@@ -164,45 +169,61 @@ class ControlPanel(QWidget):
         self.slider_thickness = QSlider(Qt.Horizontal)
         self.slider_thickness.setRange(1, 10)
         self.slider_thickness.setValue(3)
-        self.lbl_thickness_val = QLabel("3")
+        self.slider_thickness.setSingleStep(1)
+        self.slider_thickness.setPageStep(1)
+        self.spin_thickness = QSpinBox()
+        self.spin_thickness.setRange(1, 10)
+        self.spin_thickness.setValue(3)
+        self.spin_thickness.setFixedWidth(55)
         h1 = QHBoxLayout()
         h1.addWidget(self.slider_thickness)
-        h1.addWidget(self.lbl_thickness_val)
+        h1.addWidget(self.spin_thickness)
         param_layout.addLayout(h1)
-        self.slider_thickness.valueChanged.connect(
-            lambda v: self.lbl_thickness_val.setText(str(v))
-        )
+        self.slider_thickness.valueChanged.connect(self.spin_thickness.setValue)
+        self.spin_thickness.valueChanged.connect(self.slider_thickness.setValue)
+        self.slider_thickness.valueChanged.connect(self._on_param_changed)
 
         self.lbl_contrast = QLabel()
         param_layout.addWidget(self.lbl_contrast)
         self.slider_contrast = QSlider(Qt.Horizontal)
         self.slider_contrast.setRange(0, 100)
         self.slider_contrast.setValue(50)
-        self.lbl_contrast_val = QLabel("50")
+        self.slider_contrast.setSingleStep(1)
+        self.slider_contrast.setPageStep(1)
+        self.spin_contrast = QSpinBox()
+        self.spin_contrast.setRange(0, 100)
+        self.spin_contrast.setValue(50)
+        self.spin_contrast.setFixedWidth(55)
         h2 = QHBoxLayout()
         h2.addWidget(self.slider_contrast)
-        h2.addWidget(self.lbl_contrast_val)
+        h2.addWidget(self.spin_contrast)
         param_layout.addLayout(h2)
-        self.slider_contrast.valueChanged.connect(
-            lambda v: self.lbl_contrast_val.setText(str(v))
-        )
+        self.slider_contrast.valueChanged.connect(self.spin_contrast.setValue)
+        self.spin_contrast.valueChanged.connect(self.slider_contrast.setValue)
+        self.slider_contrast.valueChanged.connect(self._on_param_changed)
 
         self.lbl_threshold = QLabel()
         param_layout.addWidget(self.lbl_threshold)
         self.slider_threshold = QSlider(Qt.Horizontal)
         self.slider_threshold.setRange(0, 255)
         self.slider_threshold.setValue(127)
-        self.lbl_threshold_val = QLabel("127")
+        self.slider_threshold.setSingleStep(1)
+        self.slider_threshold.setPageStep(1)
+        self.spin_threshold = QSpinBox()
+        self.spin_threshold.setRange(0, 255)
+        self.spin_threshold.setValue(127)
+        self.spin_threshold.setFixedWidth(55)
         h3 = QHBoxLayout()
         h3.addWidget(self.slider_threshold)
-        h3.addWidget(self.lbl_threshold_val)
+        h3.addWidget(self.spin_threshold)
         param_layout.addLayout(h3)
-        self.slider_threshold.valueChanged.connect(
-            lambda v: self.lbl_threshold_val.setText(str(v))
-        )
+        self.slider_threshold.valueChanged.connect(self.spin_threshold.setValue)
+        self.spin_threshold.valueChanged.connect(self.slider_threshold.setValue)
+        self.slider_threshold.valueChanged.connect(self._on_param_changed)
 
         self.chk_invert = QCheckBox()
         param_layout.addWidget(self.chk_invert)
+        self.chk_invert.stateChanged.connect(self._on_param_changed)
 
         self.grp_params.setLayout(param_layout)
         layout.addWidget(self.grp_params)
@@ -389,6 +410,11 @@ class ControlPanel(QWidget):
         self.btn_start_paint.setEnabled(True)
         self.sketch_generated.emit(path)
 
+    # ──────────── 参数变化防抖 ────────────
+
+    def _on_param_changed(self, _=None):
+        self._debounce_timer.start(300)
+
     # ──────────── 槽函数 ────────────
 
     def _on_style_changed(self, index):
@@ -428,6 +454,14 @@ class ControlPanel(QWidget):
     def _on_generate(self):
         if not self._image_path:
             return
+
+        if self._sketch_worker is not None and self._sketch_worker.isRunning():
+            try:
+                self._sketch_worker.finished.disconnect()
+                self._sketch_worker.error.disconnect()
+            except RuntimeError:
+                pass
+            self._sketch_worker.wait()
 
         style_key = self.combo_style.currentData()
         params = self._get_params()
