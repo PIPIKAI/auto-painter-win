@@ -48,6 +48,7 @@ class PainterConfig:
         params = params or {}
         return cls(
             draw_speed_sec=cls._speed_to_delay(params.get("speed", 50)),
+            # 允许 0 表示立即开始，由 _sleep_with_cancel 内部短路处理
             start_delay_sec=max(0.0, float(params.get("delay", 0))),
             canvas_scale=max(0.1, min(2.0, float(params.get("scale", 1.0)))),
         )
@@ -333,7 +334,7 @@ class AutoPainter:
         if sketch is None:
             raise ValueError("无法读取线稿文件，请确认路径有效。")
 
-        img_h, img_w = sketch.shape[:2]  # (height, width)
+        img_height, img_width = sketch.shape[:2]  # (height, width)
 
         paths = sketch_to_contours(sketch, self.config)
         print(f"提取到路径数：{len(paths)}（越多绘制越慢）")
@@ -357,8 +358,8 @@ class AutoPainter:
 
         draw_strokes_in_paint(
             strokes,
-            img_w,
-            img_h,
+            img_width,
+            img_height,
             canvas_rect,
             self.config,
             cb,

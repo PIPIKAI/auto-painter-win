@@ -16,6 +16,9 @@ from core.auto_painter import AutoPainter, PainterConfig, PaintCancelled
 from ui.text_panel import TextPanel
 
 
+CANCELLED_REASON = "__cancelled__"
+
+
 class SketchWorker(QThread):
     """线稿生成工作线程"""
     finished = pyqtSignal(object)
@@ -61,7 +64,7 @@ class PaintWorker(QThread):
             self._painter.start(progress_callback=self.progress.emit)
             self.finished.emit()
         except PaintCancelled:
-            self.error.emit("cancelled")
+            self.error.emit(CANCELLED_REASON)
         except Exception as e:
             print(str(e))
             self.error.emit(str(e))
@@ -551,7 +554,7 @@ class ControlPanel(QWidget):
     def _on_paint_error(self, error_msg):
         self.btn_start_paint.setEnabled(True)
         self.btn_stop_paint.setEnabled(False)
-        if error_msg == "cancelled":
+        if error_msg == CANCELLED_REASON:
             self.status_message.emit(i18n.t("status_painting_stopped"))
         else:
             self.status_message.emit(i18n.t("status_painting_error", error_msg))
