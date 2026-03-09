@@ -413,7 +413,7 @@ class ControlPanel(QWidget):
     # ──────────── 参数变化防抖 ────────────
 
     def _on_param_changed(self, _=None):
-        self._debounce_timer.start(300)
+        self._debounce_timer.start(10)
 
     # ──────────── 槽函数 ────────────
 
