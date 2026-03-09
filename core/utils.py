@@ -46,32 +46,7 @@ def compute_aspect_fit_rect(img_w, img_h, canvas_left, canvas_top, canvas_w, can
     return draw_left, draw_top, draw_w, draw_h
 
 
-def sketch_to_contours(sketch_u8):
-    # 找白色线条的轮廓：需要白为前景
-    _, bin_img = cv2.threshold(sketch_u8, 127, 255, cv2.THRESH_BINARY)
 
-    # contours, _hier = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    contours, _hier = cv2.findContours(bin_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-
-    paths = []
-    for cnt in contours:
-        if len(cnt) < MIN_CONTOUR_LEN:
-            continue
-
-        # Douglas-Peucker 简化
-        eps = SIMPLIFY_EPS
-        approx = cv2.approxPolyDP(cnt, epsilon=eps, closed=False)
-
-        pts = approx.reshape(-1, 2)
-        if len(pts) < 2:
-            continue
-
-        # 抽样减少点数
-        pts2 = pts[::POINT_STRIDE] if POINT_STRIDE > 1 else pts
-        if len(pts2) < 2:
-            continue
-
-        paths.append(pts2)
 
     # 轮廓很多时，排序一下：从长到短画（减少碎线影响）
     paths.sort(key=lambda p: -len(p))

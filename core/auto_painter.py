@@ -3,14 +3,62 @@ import math
 import subprocess
 import tkinter as tk
 from tkinter import filedialog
-from imread_unicode import imread_unicode
 
 import cv2
 import numpy as np
 
 import pyautogui
 import keyboard
-from mouseapi import move_abs, button_down, button_up
+from core.mouseapi import move_abs, button_down, button_up
+from core.utils import compute_aspect_fit_rect, map_point_aspect, imread_unicode
+
+
+
+
+
+DRAW_BUTTON = "right"
+DRAW_SPEED_SEC = 0.0025
+MIN_CONTOUR_LEN = 2          # 过滤很短的轮廓（噪声）
+JOIN_DIST_PX = 5          # 在“原图坐标系”里，两段之间小于这个距离就不断笔连接
+ALLOW_BRIDGE_LINE = True  # 距离略大也不断笔，用直线桥接（可能产生不想要的连线）
+BRIDGE_MAX_DIST_PX = 15   # 允许桥接的最大距离（原图坐标）
+SIMPLIFY_EPS = 0.5            # 轮廓简化强度（越大点越少，线越“直”）
+POINT_STRIDE = 1              # 路径点抽样：每隔 N 个点取 1 个（越大越快但更粗糙）
+
+def sketch_to_contours(sketch_u8):
+    # 找白色线条的轮廓：需要白为前景
+    _, bin_img = cv2.threshold(sketch_u8, 127, 255, cv2.THRESH_BINARY)
+
+    # contours, _hier = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    contours, _hier = cv2.findContours(bin_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+
+    paths = []
+    for cnt in contours:
+        if len(cnt) < MIN_CONTOUR_LEN:
+            continue
+
+        # Douglas-Peucker 简化
+        eps = SIMPLIFY_EPS
+        approx = cv2.approxPolyDP(cnt, epsilon=eps, closed=False)
+
+        pts = approx.reshape(-1, 2)
+        if len(pts) < 2:
+            continue
+
+        # 抽样减少点数
+        pts2 = pts[::POINT_STRIDE] if POINT_STRIDE > 1 else pts
+        if len(pts2) < 2:
+            continue
+
+        paths.append(pts2)
+    # 轮廓很多时，排序一下：从长到短画（减少碎线影响）
+    paths.sort(key=lambda p: -len(p))
+    return paths
+
+def _dist2(a, b):
+    dx = float(a[0] - b[0])
+    dy = float(a[1] - b[1])
+    return dx*dx + dy*dy
 
 def calibrate_canvas_rect():
     """
@@ -51,7 +99,7 @@ def calibrate_canvas_rect():
 
     return left, top, width, height
 
-def draw_strokes_in_paint(strokes, img_w, img_h, canvas_rect):
+def draw_strokes_in_paint(strokes, img_w, img_h, canvas_rect, progress_callback):
     canvas_left, canvas_top, canvas_w, canvas_h = canvas_rect
 
     # ✅ 计算等比绘制区域（在用户框选区域内部居中、保持比例）
@@ -94,6 +142,11 @@ def draw_strokes_in_paint(strokes, img_w, img_h, canvas_rect):
 
         if i % 10 == 0 or i == total:
             print(f"进度：{i}/{total} 笔")
+        
+        progress = int(i/total * 100)
+        print(f"progress: {progress}")
+        progress_callback(progress)
+            
 
     print("\n完成。")
 
@@ -160,3 +213,25 @@ def reorder_and_merge_paths(paths, join_dist_px=6, allow_bridge_line=True, bridg
             strokes.append(next_path)
 
     return strokes
+
+
+def auto_painter_start(sketch_img_path, parms , progress_callback):
+
+    sketch = imread_unicode(sketch_img_path, 0)
+    w,h = sketch.shape[:2]
+    paths = sketch_to_contours(sketch)
+    print(f"提取到路径数：{len(paths)}（越多绘制越慢）")
+
+
+    strokes = reorder_and_merge_paths(
+        paths,
+        join_dist_px=JOIN_DIST_PX,
+        allow_bridge_line=ALLOW_BRIDGE_LINE,
+        bridge_max_dist_px=BRIDGE_MAX_DIST_PX,
+    )
+    print(f"合并后笔画数：{len(strokes)}（越少抬笔越少）")
+
+    canvas_rect = calibrate_canvas_rect()
+    print(f"画布区域：left={canvas_rect[0]} top={canvas_rect[1]} w={canvas_rect[2]} h={canvas_rect[3]}")
+
+    draw_strokes_in_paint(strokes, w, h, canvas_rect , progress_callback)

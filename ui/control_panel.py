@@ -12,6 +12,7 @@ from PyQt5.QtGui import QPixmap
 
 from ui.i18n import i18n
 from core.sketch_generator import SketchGenerator
+from core.auto_painter import auto_painter_start
 from ui.text_panel import TextPanel
 
 
@@ -52,17 +53,21 @@ class PaintWorker(QThread):
         try:
             # TODO: 调用你已实现的自动绘画接口
             # from core.auto_painter import AutoPainter
+            # from core.auto_painter import AutoPainter
             # painter = AutoPainter(self.sketch_data, self.params)
             # painter.start(progress_callback=self.progress.emit)
+            
+            auto_painter_start(self.sketch_data, self.params,self.progress.emit)
 
-            import time
-            for i in range(101):
-                if not self._is_running:
-                    return
-                time.sleep(0.05)
-                self.progress.emit(i)
+            # import time
+            # for i in range(101):
+            #     if not self._is_running:
+            #         return
+            #     time.sleep(0.05)
+                # self.progress.emit(i)
             self.finished.emit()
         except Exception as e:
+            print(str(e))
             self.error.emit(str(e))
 
     def stop(self):
