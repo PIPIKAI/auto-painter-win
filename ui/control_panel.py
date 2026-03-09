@@ -11,6 +11,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QThread
 from PyQt5.QtGui import QPixmap
 
 from ui.i18n import i18n
+from core.sketch_generator import SketchGenerator
 from ui.text_panel import TextPanel
 
 
@@ -24,11 +25,11 @@ class SketchWorker(QThread):
         self.image_path = image_path
         self.style = style
         self.params = params
+        self.generator = SketchGenerator()
 
     def run(self):
         try:
-            from core.sketch_generator import generate_sketch
-            result = generate_sketch(self.image_path, self.style, self.params)
+            result = self.generator.generate(self.image_path, self.style, self.params)
             self.finished.emit(result)
 
         except Exception as e:
