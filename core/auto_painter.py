@@ -334,7 +334,7 @@ class AutoPainter:
         if sketch is None:
             raise ValueError("无法读取线稿文件，请确认路径有效。")
 
-        img_height, img_width = sketch.shape[:2]  # (height, width)
+        height, width = sketch.shape[:2]  # (height, width)
 
         paths = sketch_to_contours(sketch, self.config)
         print(f"提取到路径数：{len(paths)}（越多绘制越慢）")
@@ -358,8 +358,8 @@ class AutoPainter:
 
         draw_strokes_in_paint(
             strokes,
-            img_width,
-            img_height,
+            width,
+            height,
             canvas_rect,
             self.config,
             cb,
