@@ -47,7 +47,7 @@ class PainterConfig:
     def from_params(cls, params: Optional[dict] = None) -> "PainterConfig":
         params = params or {}
         return cls(
-            draw_speed_sec=cls._speed_to_delay(params.get("speed", 50)),
+            draw_speed_sec=cls._speed_to_delay(params.get("speed", DEFAULT_SPEED_VALUE)),
             # 允许 0 表示立即开始，由 _sleep_with_cancel 内部短路处理
             start_delay_sec=max(0.0, float(params.get("delay", 0))),
             canvas_scale=max(0.1, min(2.0, float(params.get("scale", 1.0)))),
@@ -60,6 +60,7 @@ class PaintCancelled(Exception):
 
 SCALE_EPSILON = 1e-6
 CANCEL_CHECK_INTERVAL = 0.1
+DEFAULT_SPEED_VALUE = 50
 
 
 def sketch_to_contours(sketch_u8, config: PainterConfig):
@@ -334,7 +335,9 @@ class AutoPainter:
         if sketch is None:
             raise ValueError("无法读取线稿文件，请确认路径有效。")
 
-        height, width = sketch.shape[:2]  # (height, width)
+        # OpenCV shape -> (height, width)
+        height = int(sketch.shape[0])
+        width = int(sketch.shape[1])
 
         paths = sketch_to_contours(sketch, self.config)
         print(f"提取到路径数：{len(paths)}（越多绘制越慢）")
