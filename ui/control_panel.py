@@ -12,7 +12,7 @@ from PyQt5.QtGui import QPixmap
 
 from ui.i18n import i18n
 from core.sketch_generator import SketchGenerator
-from core.auto_painter import auto_painter_start
+from core.auto_painter import AutoPainter, PainterConfig, PaintCancelled
 from ui.text_panel import TextPanel
 
 
@@ -48,30 +48,28 @@ class PaintWorker(QThread):
         self.sketch_data = sketch_data
         self.params = params
         self._is_running = True
+        self._painter = None
 
     def run(self):
         try:
-            # TODO: 调用你已实现的自动绘画接口
-            # from core.auto_painter import AutoPainter
-            # from core.auto_painter import AutoPainter
-            # painter = AutoPainter(self.sketch_data, self.params)
-            # painter.start(progress_callback=self.progress.emit)
-            
-            auto_painter_start(self.sketch_data, self.params,self.progress.emit)
-
-            # import time
-            # for i in range(101):
-            #     if not self._is_running:
-            #         return
-            #     time.sleep(0.05)
-                # self.progress.emit(i)
+            config = PainterConfig.from_params(self.params)
+            self._painter = AutoPainter(
+                self.sketch_data,
+                config,
+                stop_checker=lambda: not self._is_running,
+            )
+            self._painter.start(progress_callback=self.progress.emit)
             self.finished.emit()
+        except PaintCancelled:
+            self.error.emit("cancelled")
         except Exception as e:
             print(str(e))
             self.error.emit(str(e))
 
     def stop(self):
         self._is_running = False
+        if self._painter:
+            self._painter.request_stop()
 
 
 class ControlPanel(QWidget):
@@ -553,7 +551,10 @@ class ControlPanel(QWidget):
     def _on_paint_error(self, error_msg):
         self.btn_start_paint.setEnabled(True)
         self.btn_stop_paint.setEnabled(False)
-        self.status_message.emit(i18n.t("status_painting_error", error_msg))
+        if error_msg == "cancelled":
+            self.status_message.emit(i18n.t("status_painting_stopped"))
+        else:
+            self.status_message.emit(i18n.t("status_painting_error", error_msg))
 
     def _on_stop_painting(self):
         if self._paint_worker:
