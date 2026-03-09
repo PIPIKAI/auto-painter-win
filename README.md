@@ -1,5 +1,7 @@
 # AutoPainter Win
 
+![LOGO](doc/LOGO.png)
+
 AutoPainter Win 是一个基于 PyQt5 的桌面应用，用于将图片转换为线稿，并提供自动绘画相关的界面与核心模块。
 
 ## 功能概览
