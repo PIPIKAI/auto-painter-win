@@ -96,6 +96,9 @@ class PreviewPanel(QWidget):
         right_container.addWidget(self.viewer_sketch)
         compare_layout.addLayout(right_container)
 
+        # 设置左侧布局的伸缩因子，使左侧和右侧的比例固定
+        compare_layout.setStretch(0, 1)  # 左侧部分
+        compare_layout.setStretch(2, 1)  # 右侧部分不伸缩
         self.tabs.addTab(compare_widget, "")
 
         # ── Tab 2: 仅原图 ──

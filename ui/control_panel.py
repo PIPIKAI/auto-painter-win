@@ -442,7 +442,8 @@ class ControlPanel(QWidget):
             self.btn_generate.setEnabled(True)
             self.image_selected.emit(path)
             self.status_message.emit(i18n.t("status_image_loaded", filename))
-
+            self.lbl_thumbnail.hide()
+            
     def _get_params(self):
         return {
             "thickness": self.slider_thickness.value(),

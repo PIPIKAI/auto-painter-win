@@ -133,7 +133,17 @@ QComboBox::drop-down {
     width: 24px;
 }
 
-/* 滑块 */
+/* 设置选中项的背景色和文本颜色 */
+QComboBox::item:selected {
+    background-color: #4a90d9;  /* 设置选中项的背景色 */
+    color: #fff;  /* 设置选中项的文字颜色 */
+}
+
+QComboBox::item {
+    background-color: #fff;  /* 设置未选中项的背景色 */
+    color: #000;  /* 设置未选中项的文字颜色 */
+}
+
 QSlider::groove:horizontal {
     border: none;
     height: 6px;
@@ -156,6 +166,27 @@ QSlider::handle:horizontal:hover {
 QSlider::sub-page:horizontal {
     background: #4a90d9;
     border-radius: 3px;
+}
+
+/* 上下按钮样式 */
+QSlider::up-button, QSlider::down-button {
+    background-color: #4a90d9;
+    border: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 8px;
+}
+
+/* 上下按钮悬停状态 */
+QSlider::up-button:hover, QSlider::down-button:hover {
+    background-color: #357abd;
+}
+
+/* 上下按钮的箭头图标 */
+QSlider::up-button::icon, QSlider::down-button::icon {
+    image: url('path/to/your/arrow_icon.png');
+    width: 10px;  /* 根据需要调整图标大小 */
+    height: 10px;
 }
 
 /* 进度条 */

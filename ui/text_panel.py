@@ -96,15 +96,6 @@ class TextPanel(QWidget):
         self.btn_preview.clicked.connect(self._on_preview)
         grp_layout.addWidget(self.btn_preview)
 
-        # 预览图
-        self.lbl_preview = QLabel()
-        self.lbl_preview.setFixedHeight(100)
-        self.lbl_preview.setAlignment(Qt.AlignCenter)
-        self.lbl_preview.setStyleSheet(
-            "border: 1px dashed #ccc; border-radius: 4px; background: #fff;"
-        )
-        grp_layout.addWidget(self.lbl_preview)
-
         self.grp_text.setLayout(grp_layout)
         layout.addWidget(self.grp_text)
 
@@ -137,15 +128,6 @@ class TextPanel(QWidget):
         rendered_path = self._render_text(text)
         if rendered_path:
             self._rendered_path = rendered_path
-            # 预览
-            pixmap = QPixmap(rendered_path)
-            if not pixmap.isNull():
-                scaled = pixmap.scaled(
-                    self.lbl_preview.size(),
-                    Qt.KeepAspectRatio,
-                    Qt.SmoothTransformation
-                )
-                self.lbl_preview.setPixmap(scaled)
 
             self.text_rendered.emit(rendered_path)
             self.status_message.emit(i18n.t("status_text_rendered"))
