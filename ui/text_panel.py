@@ -156,7 +156,7 @@ class TextPanel(QWidget):
 
         # 创建白底黑字图像
         image = QImage(width, height, QImage.Format_RGB32)
-        image.fill(QColor(255, 255, 255))
+        image.fill(QColor(0, 0, 0))
 
         painter = QPainter(image)
         painter.setRenderHint(QPainter.Antialiasing, True)
@@ -166,9 +166,9 @@ class TextPanel(QWidget):
         offset_x = margin - bounding.left()
         offset_y = margin - bounding.top()
 
-        painter.setPen(QPen(QColor(0, 0, 0), 2))
-        painter.setBrush(QColor(0, 0, 0))
-
+        painter.setPen(QPen(QColor(255, 255, 255), 2))  # 改为白色边框
+        painter.setBrush(QColor(255, 255, 255))  # 改为白色填充
+        
         translated_path = QPainterPath()
         translated_path.addText(offset_x, offset_y, font, text)
         painter.drawPath(translated_path)
