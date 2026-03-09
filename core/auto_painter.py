@@ -35,7 +35,7 @@ class PainterConfig:
     def _speed_to_delay(speed_value: int) -> float:
         """
         将界面 1-100 的速度值映射到每个点的停顿时间（秒）。
-        数值越大越快。
+        数值越大越快（约 0.008s → 0.0008s）。
         """
         speed_value = max(1, min(100, int(speed_value)))
         slowest = 0.008
@@ -336,8 +336,8 @@ class AutoPainter:
             raise ValueError("无法读取线稿文件，请确认路径有效。")
 
         # OpenCV shape -> (height, width)
-        height = int(sketch.shape[0])
-        width = int(sketch.shape[1])
+        height = sketch.shape[0]
+        width = sketch.shape[1]
 
         paths = sketch_to_contours(sketch, self.config)
         print(f"提取到路径数：{len(paths)}（越多绘制越慢）")
