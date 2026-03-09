@@ -2,6 +2,7 @@
 左侧控制面板 - 包含所有操作按钮和参数调整
 """
 import os
+import json
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox,
@@ -20,6 +21,8 @@ from ui.text_panel import TextPanel
 
 
 CANCELLED_SENTINEL = "__cancelled__"
+
+SETTINGS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "settings.json")
 
 
 class SketchWorker(QThread):
@@ -105,12 +108,14 @@ class ControlPanel(QWidget):
         self._paint_worker = None
         self._paint_mode = "sketch"  # "sketch" 或 "text"
         self._start_shortcut = None
+        self._pending_history_entry = None  # (sketch_path, source_path, style, params)
 
         self._debounce_timer = QTimer(self)
         self._debounce_timer.setSingleShot(True)
         self._debounce_timer.timeout.connect(self._on_generate)
 
         self._init_ui()
+        self._load_hotkey_settings()
         i18n.language_changed.connect(self._retranslate)
 
     def _init_ui(self):
@@ -393,6 +398,7 @@ class ControlPanel(QWidget):
         # 热键刷新
         for editor in (self.key_start, self.key_calib_start, self.key_calib_end, self.key_abort):
             editor.keySequenceChanged.connect(lambda _seq: self._refresh_hotkeys())
+            editor.keySequenceChanged.connect(self._save_hotkey_settings)
         self._refresh_hotkeys()
 
         layout.addStretch()
@@ -487,6 +493,47 @@ class ControlPanel(QWidget):
             return fallback
         # keyboard 库使用小写，且去掉空格
         return seq.toString().replace(" ", "").lower() or fallback
+
+    def _load_hotkey_settings(self):
+        """从 settings.json 加载快捷键配置并应用到 UI。"""
+        if not os.path.exists(SETTINGS_PATH):
+            return
+        try:
+            with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
+                settings = json.load(f)
+            hotkeys = settings.get("hotkeys", {})
+            mapping = {
+                "start": self.key_start,
+                "calib_start": self.key_calib_start,
+                "calib_end": self.key_calib_end,
+                "abort": self.key_abort,
+            }
+            for key, editor in mapping.items():
+                if key in hotkeys and hotkeys[key]:
+                    editor.setKeySequence(QKeySequence(hotkeys[key]))
+        except (json.JSONDecodeError, IOError, KeyError):
+            pass
+
+    def _save_hotkey_settings(self, _seq=None):
+        """将当前快捷键配置保存到 settings.json。"""
+        settings = {}
+        if os.path.exists(SETTINGS_PATH):
+            try:
+                with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
+                    settings = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
+        settings["hotkeys"] = {
+            "start": self.key_start.keySequence().toString(),
+            "calib_start": self.key_calib_start.keySequence().toString(),
+            "calib_end": self.key_calib_end.keySequence().toString(),
+            "abort": self.key_abort.keySequence().toString(),
+        }
+        try:
+            with open(SETTINGS_PATH, "w", encoding="utf-8") as f:
+                json.dump(settings, f, ensure_ascii=False, indent=2)
+        except IOError:
+            pass
 
     def _on_text_rendered(self, path: str):
         """写字模式下，文字渲染完成后当作线稿数据"""
@@ -584,11 +631,14 @@ class ControlPanel(QWidget):
         self.sketch_generated.emit(result)
         self.status_message.emit(i18n.t("status_generate_done"))
 
-        # 通知保存到历史记录
+        # 暂存历史记录信息，绘画成功后才写入历史
         style_display = i18n.t(f"style_{style_key}") if i18n.t(f"style_{style_key}") != f"style_{style_key}" else style_key
         source = self._image_path or ""
         if isinstance(result, str):
-            self.history_entry.emit(result, source, style_display, params)
+            self._pending_history_entry = (result, source, style_display, params)
+        else:
+            # result 非字符串路径（如 AI 模式返回图像数组）时不记录历史
+            self._pending_history_entry = None
 
     def _on_sketch_error(self, error_msg):
         self.btn_generate.setEnabled(True)
@@ -646,6 +696,12 @@ class ControlPanel(QWidget):
         self.btn_start_paint.setEnabled(True)
         self.btn_stop_paint.setEnabled(False)
         self.status_message.emit(i18n.t("status_painting_done"))
+
+        # 绘画成功后保存到历史记录
+        if self._pending_history_entry is not None:
+            sketch_path, source_path, style, params = self._pending_history_entry
+            self.history_entry.emit(sketch_path, source_path, style, params)
+            self._pending_history_entry = None
 
     def _on_paint_error(self, error_msg):
         self.btn_start_paint.setEnabled(True)
