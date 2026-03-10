@@ -49,6 +49,7 @@ class SketchWorker(QThread):
 class PaintWorker(QThread):
     """自动绘画工作线程"""
     progress = pyqtSignal(int)
+    status = pyqtSignal(str)
     finished = pyqtSignal()
     error = pyqtSignal(str)
 
@@ -67,7 +68,10 @@ class PaintWorker(QThread):
                 config,
                 stop_checker=lambda: not self._is_running,
             )
-            self._painter.start(progress_callback=self.progress.emit)
+            self._painter.start(
+                progress_callback=self.progress.emit,
+                status_callback=self.status.emit,
+            )
             self.finished.emit()
         except PaintCancelled:
             self.error.emit(CANCELLED_SENTINEL)
@@ -87,6 +91,7 @@ class ControlPanel(QWidget):
     sketch_generated = pyqtSignal(object)
     painting_progress = pyqtSignal(int)
     status_message = pyqtSignal(str)
+    notification_message = pyqtSignal(str)
 
     # 新增：通知主窗口保存历史
     history_entry = pyqtSignal(str, str, str, dict)  # sketch_path, source_path, style, params
@@ -306,28 +311,11 @@ class ControlPanel(QWidget):
             lambda v: self.lbl_speed_val.setText(str(v))
         )
 
-        # 起笔延迟
-        self.lbl_delay = QLabel()
-        paint_layout.addWidget(self.lbl_delay)
-        self.spin_delay = QSpinBox()
-        self.spin_delay.setRange(1, 30)
-        self.spin_delay.setValue(5)
-        paint_layout.addWidget(self.spin_delay)
+        self.lbl_draw_button = QLabel()
+        paint_layout.addWidget(self.lbl_draw_button)
+        self.combo_draw_button = QComboBox()
+        paint_layout.addWidget(self.combo_draw_button)
 
-        # 画布缩放
-        self.lbl_scale = QLabel()
-        paint_layout.addWidget(self.lbl_scale)
-        self.slider_scale = QSlider(Qt.Horizontal)
-        self.slider_scale.setRange(10, 200)
-        self.slider_scale.setValue(100)
-        self.lbl_scale_val = QLabel("100%")
-        h5 = QHBoxLayout()
-        h5.addWidget(self.slider_scale)
-        h5.addWidget(self.lbl_scale_val)
-        paint_layout.addLayout(h5)
-        self.slider_scale.valueChanged.connect(
-            lambda v: self.lbl_scale_val.setText(f"{v}%")
-        )
         # 热键配置
         self.grp_hotkeys = QGroupBox()
         hotkey_layout = QVBoxLayout()
@@ -450,9 +438,15 @@ class ControlPanel(QWidget):
         self.radio_sketch.setText(i18n.t("radio_draw_sketch"))
         self.radio_text.setText(i18n.t("radio_write_text"))
         self.lbl_speed.setText(i18n.t("lbl_speed"))
-        self.lbl_delay.setText(i18n.t("lbl_delay"))
-        self.spin_delay.setSuffix(i18n.t("suffix_seconds"))
-        self.lbl_scale.setText(i18n.t("lbl_scale"))
+        self.lbl_draw_button.setText(i18n.t("lbl_draw_button"))
+        current_button = self.combo_draw_button.currentData()
+        self.combo_draw_button.blockSignals(True)
+        self.combo_draw_button.clear()
+        self.combo_draw_button.addItem(i18n.t("draw_button_left"), "left")
+        self.combo_draw_button.addItem(i18n.t("draw_button_right"), "right")
+        index = self.combo_draw_button.findData(current_button if current_button else "right")
+        self.combo_draw_button.setCurrentIndex(max(0, index))
+        self.combo_draw_button.blockSignals(False)
         self.grp_hotkeys.setTitle(i18n.t("group_hotkeys"))
         self.lbl_start_hotkey.setText(i18n.t("lbl_start_hotkey"))
         self.lbl_calib_start.setText(i18n.t("lbl_calib_start"))
@@ -539,6 +533,16 @@ class ControlPanel(QWidget):
         """写字模式下，文字渲染完成后当作线稿数据"""
         self._sketch_data = path
         self.btn_start_paint.setEnabled(True)
+        self._pending_history_entry = (
+            path,
+            "",
+            i18n.t("radio_write_text"),
+            {
+                "text": self.text_panel.text_edit.toPlainText().strip(),
+                "font": self.text_panel.font_combo.currentData(),
+                "font_size": int(self.text_panel.combo_font_size.currentText()),
+            },
+        )
         self.sketch_generated.emit(path)
         self.status_message.emit(i18n.t("status_generate_done"))
 
@@ -667,8 +671,7 @@ class ControlPanel(QWidget):
 
         paint_params = {
             "speed": self.slider_speed.value(),
-            "delay": self.spin_delay.value(),
-            "scale": self.slider_scale.value() / 100.0,
+            "draw_button": self.combo_draw_button.currentData() or "right",
             "mode": self._paint_mode,
             "calibrate_start_key": self._hotkey_value(self.key_calib_start, "f7"),
             "calibrate_end_key": self._hotkey_value(self.key_calib_end, "f8"),
@@ -678,12 +681,11 @@ class ControlPanel(QWidget):
         self.btn_start_paint.setEnabled(False)
         self.btn_stop_paint.setEnabled(True)
         self.progress_bar.setValue(0)
-        self.status_message.emit(
-            i18n.t("status_painting_countdown", paint_params["delay"])
-        )
+        self.status_message.emit(i18n.t("status_painting_prepare"))
 
         self._paint_worker = PaintWorker(self._sketch_data, paint_params)
         self._paint_worker.progress.connect(self._on_paint_progress)
+        self._paint_worker.status.connect(self._on_paint_status)
         self._paint_worker.finished.connect(self._on_paint_finished)
         self._paint_worker.error.connect(self._on_paint_error)
         self._paint_worker.start()
@@ -717,3 +719,7 @@ class ControlPanel(QWidget):
             self.btn_start_paint.setEnabled(True)
             self.btn_stop_paint.setEnabled(False)
             self.status_message.emit(i18n.t("status_painting_stopped"))
+
+    def _on_paint_status(self, message: str):
+        self.status_message.emit(message)
+        self.notification_message.emit(message)

@@ -23,7 +23,8 @@ class MainWindow(QMainWindow):
         self.resize(1280, 800)
         self.setStyleSheet(GLOBAL_STYLE)
         self._tray_icon = None
-        self._last_tray_progress = -10
+        self._last_paint_progress = 0
+        self._tray_progress_marks_shown = set()
 
         self._init_menubar()
         self._init_ui()
@@ -120,6 +121,7 @@ class MainWindow(QMainWindow):
         self.control_panel.sketch_generated.connect(self.preview_panel.set_sketch_image)
         self.control_panel.painting_progress.connect(self._update_progress)
         self.control_panel.status_message.connect(self._update_status)
+        self.control_panel.notification_message.connect(self._show_tray_message)
         self.control_panel.history_entry.connect(self.history_panel.add_entry)
 
         self.history_panel.sketch_loaded.connect(self._on_history_loaded)
@@ -175,18 +177,32 @@ class MainWindow(QMainWindow):
     def _show_tray_progress(self, value: int):
         if not self._tray_icon or not QSystemTrayIcon.isSystemTrayAvailable():
             return
-        if value < 0 or (value - self._last_tray_progress < 5 and value != 100):
+        if value < self._last_paint_progress:
+            self._tray_progress_marks_shown.clear()
+        self._last_paint_progress = value
+        milestone = next((mark for mark in (25, 50, 75) if value >= mark and mark not in self._tray_progress_marks_shown), None)
+        if milestone is None:
             return
-        self._last_tray_progress = value
+        self._tray_progress_marks_shown.add(milestone)
         self._tray_icon.showMessage(
             self.windowTitle(),
-            i18n.t("status_painting_progress", value),
+            i18n.t("status_painting_progress", milestone),
             QSystemTrayIcon.Information,
             3000
         )
 
     def _update_status(self, message):
         self.statusBar().showMessage(message)
+
+    def _show_tray_message(self, message: str):
+        if not self._tray_icon or not QSystemTrayIcon.isSystemTrayAvailable():
+            return
+        self._tray_icon.showMessage(
+            self.windowTitle(),
+            message,
+            QSystemTrayIcon.Information,
+            3000
+        )
 
     def _on_history_loaded(self, path: str):
         self.control_panel.load_sketch_from_history(path)

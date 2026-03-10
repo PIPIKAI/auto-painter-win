@@ -46,7 +46,11 @@ class PainterConfig:
     @classmethod
     def from_params(cls, params: Optional[dict] = None) -> "PainterConfig":
         params = params or {}
+        draw_button = str(params.get("draw_button", cls.draw_button)).lower()
+        if draw_button not in {"left", "right"}:
+            draw_button = cls.draw_button
         return cls(
+            draw_button=draw_button,
             draw_speed_sec=cls._speed_to_delay(params.get("speed", DEFAULT_SPEED_VALUE)),
             # 允许 0 表示立即开始，由 _sleep_with_cancel 内部短路处理
             start_delay_sec=max(0.0, float(params.get("delay", 0))),
@@ -121,7 +125,11 @@ def _scale_and_center_draw_rect(draw_rect, canvas_rect, scale: float):
     return left, top, scaled_w, scaled_h
 
 
-def calibrate_canvas_rect(config: PainterConfig, stop_checker: Callable[[], bool]):
+def calibrate_canvas_rect(
+    config: PainterConfig,
+    stop_checker: Callable[[], bool],
+    status_callback: Optional[Callable[[str], None]] = None,
+):
     """
     通过热键让用户用鼠标指向画布左上、右下。
     """
@@ -130,6 +138,10 @@ def calibrate_canvas_rect(config: PainterConfig, stop_checker: Callable[[], bool
         f"把鼠标移动到【画布左上角】按 {config.calibrate_start_key.upper()}；"
         f"移动到【画布右下角】按 {config.calibrate_end_key.upper()}。按 {config.abort_key.upper()} 终止。"
     )
+    if status_callback:
+        status_callback(
+            f"请移动鼠标到画布左上角后按 {config.calibrate_start_key.upper()} 记录"
+        )
 
     p1 = None
     p2 = None
@@ -140,6 +152,8 @@ def calibrate_canvas_rect(config: PainterConfig, stop_checker: Callable[[], bool
         if keyboard.is_pressed(config.calibrate_start_key):
             p1 = pyautogui.position()
             print(f"已记录左上角: {p1}")
+            if status_callback:
+                status_callback(f"已记录左上角: ({p1.x}, {p1.y})")
             time.sleep(0.3)
 
     while p2 is None:
@@ -148,6 +162,8 @@ def calibrate_canvas_rect(config: PainterConfig, stop_checker: Callable[[], bool
         if keyboard.is_pressed(config.calibrate_end_key):
             p2 = pyautogui.position()
             print(f"已记录右下角: {p2}")
+            if status_callback:
+                status_callback(f"已记录右下角: ({p2.x}, {p2.y})")
             time.sleep(0.3)
 
     left = min(p1.x, p2.x)
@@ -326,7 +342,11 @@ class AutoPainter:
             remaining = end_at - time.time()
             time.sleep(min(CANCEL_CHECK_INTERVAL, max(0.0, remaining)))
 
-    def start(self, progress_callback: Optional[Callable[[int], None]] = None):
+    def start(
+        self,
+        progress_callback: Optional[Callable[[int], None]] = None,
+        status_callback: Optional[Callable[[str], None]] = None,
+    ):
         cb = progress_callback or (lambda _: None)
         cb(0)
 
@@ -356,7 +376,7 @@ class AutoPainter:
         if not strokes:
             raise ValueError("未找到可绘制的路径，请检查线稿结果。")
 
-        canvas_rect = calibrate_canvas_rect(self.config, self._should_stop)
+        canvas_rect = calibrate_canvas_rect(self.config, self._should_stop, status_callback)
         print(
             f"画布区域：left={canvas_rect[0]} top={canvas_rect[1]} "
             f"w={canvas_rect[2]} h={canvas_rect[3]}"
