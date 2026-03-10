@@ -23,6 +23,7 @@ from ui.text_panel import TextPanel
 
 
 CANCELLED_SENTINEL = "__cancelled__"
+DEFAULT_DRAW_BUTTON_SIDE = "right"
 
 
 class SketchWorker(QThread):
@@ -161,7 +162,7 @@ class ControlPanel(QWidget):
         # ═══ 顶部操作 ═══
         top_row = QHBoxLayout()
         top_row.addStretch()
-        self.btn_settings = QPushButton("⚙️")
+        self.btn_settings = QPushButton(i18n.t("btn_settings_open"))
         self.btn_settings.setObjectName("primaryButton")
         self.btn_settings.setFixedHeight(34)
         self.btn_settings.clicked.connect(self.settings_requested.emit)
@@ -446,10 +447,12 @@ class ControlPanel(QWidget):
             self.text_panel.setVisible(True)
 
     def _load_draw_button_setting(self):
-        draw_button = self._get_paint_settings().get("draw_button", "right")
+        draw_button = self._get_paint_settings().get("draw_button")
         self._apply_draw_button(draw_button)
 
     def _apply_draw_button(self, draw_button: str):
+        if draw_button not in {"left", "right"}:
+            draw_button = DEFAULT_DRAW_BUTTON_SIDE
         is_left = draw_button == "left"
         self.btn_draw_left.setChecked(is_left)
         self.btn_draw_right.setChecked(not is_left)
@@ -459,7 +462,8 @@ class ControlPanel(QWidget):
         self._save_paint_settings(draw_button)
 
     def _current_draw_button(self) -> str:
-        return "left" if self.btn_draw_left.isChecked() else "right"
+        assert self.btn_draw_left.isChecked() or self.btn_draw_right.isChecked(), "Draw button toggle must keep one option selected"
+        return "left" if self.btn_draw_left.isChecked() else DEFAULT_DRAW_BUTTON_SIDE
 
     def _refresh_hotkeys(self):
         """根据设置文件中的快捷键配置更新快捷方式。"""
@@ -531,9 +535,9 @@ class ControlPanel(QWidget):
         """从 settings.json 读取绘画相关配置。"""
         settings = load_settings()
         paint = settings.get("paint", {})
-        draw_button = paint.get("draw_button", "right")
+        draw_button = paint.get("draw_button", DEFAULT_DRAW_BUTTON_SIDE)
         if draw_button not in {"left", "right"}:
-            draw_button = "right"
+            draw_button = DEFAULT_DRAW_BUTTON_SIDE
         return {"draw_button": draw_button}
 
     def _save_paint_settings(self, draw_button: str):

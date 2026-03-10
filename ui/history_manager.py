@@ -3,6 +3,7 @@
 自动保存生成的线稿，提供浏览/加载/删除功能
 """
 import os
+import sys
 import json
 import shutil
 import hashlib
@@ -44,7 +45,8 @@ def _save_index(entries: list):
 
 
 def _calc_file_hash(path: str) -> str:
-    if not path or not os.path.isfile(path):
+    """返回文件的 SHA-256 哈希用于去重；missing/error -> '' (Return '' on missing or errors)."""
+    if not path:
         return ""
     h = hashlib.sha256()
     try:
@@ -52,7 +54,11 @@ def _calc_file_hash(path: str) -> str:
             for chunk in iter(lambda: f.read(8192), b""):
                 h.update(chunk)
         return h.hexdigest()
-    except OSError:
+    except FileNotFoundError:
+        return ""
+    except OSError as e:
+        # Keep lightweight stderr output to avoid introducing logging configuration in UI layer.
+        print(f"[history] Failed to hash {path}: {e}", file=sys.stderr)
         return ""
 
 
@@ -270,15 +276,27 @@ class HistoryPanel(QWidget):
         _ensure_history_dir()
 
         source_hash = _calc_file_hash(source_path)
+        needs_save = False
+        duplicate_found = False
         for entry in self._entries:
+            entry_hash = entry.get("source_hash")
+            if not entry_hash:
+                entry_hash = _calc_file_hash(entry.get("source_path", ""))
+                if entry_hash:
+                    entry["source_hash"] = entry_hash
+                    needs_save = True
             if entry.get("style") != style:
                 continue
             if entry.get("params", {}) != params:
                 continue
-            existing_hash = entry.get("source_hash") or _calc_file_hash(entry.get("source_path", ""))
-            if source_hash and existing_hash and source_hash == existing_hash:
-                self.status_message.emit(i18n.t("history_skipped_duplicate"))
-                return
+            if source_hash and entry_hash and source_hash == entry_hash:
+                duplicate_found = True
+                break
+        if duplicate_found:
+            if needs_save:
+                _save_index(self._entries)
+            self.status_message.emit(i18n.t("history_skipped_duplicate"))
+            return
 
         timestamp = datetime.now().isoformat()
         safe_name = datetime.now().strftime("%Y%m%d_%H%M%S")
