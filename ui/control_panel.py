@@ -9,20 +9,19 @@ from PyQt5.QtWidgets import (
     QPushButton, QLabel, QSlider, QComboBox,
     QFileDialog, QSpinBox, QCheckBox, QProgressBar,
     QScrollArea, QFrame, QRadioButton, QButtonGroup,
-    QKeySequenceEdit, QShortcut
+    QShortcut
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QThread, QTimer
 from PyQt5.QtGui import QPixmap, QKeySequence
 
 from ui.i18n import i18n
+from ui.app_paths import SETTINGS_PATH
 from core.sketch_generator import SketchGenerator
 from core.auto_painter import AutoPainter, PainterConfig, PaintCancelled
 from ui.text_panel import TextPanel
 
 
 CANCELLED_SENTINEL = "__cancelled__"
-
-SETTINGS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "settings.json")
 
 
 class SketchWorker(QThread):
@@ -42,6 +41,31 @@ class SketchWorker(QThread):
             result = self.generator.generate(self.image_path, self.style, self.params)
             self.finished.emit(result)
 
+        except Exception as e:
+            self.error.emit(str(e))
+
+
+class AISketchWorker(QThread):
+    """AI 线稿生成工作线程"""
+    finished = pyqtSignal(object)
+    error = pyqtSignal(str)
+
+    def __init__(self, image_path, ai_settings):
+        super().__init__()
+        self.image_path = image_path
+        self.ai_settings = ai_settings
+
+    def run(self):
+        try:
+            from core.ai_generator import AIGenerator
+            gen = AIGenerator(
+                api_provider=self.ai_settings.get("provider", "openai"),
+                api_url=self.ai_settings.get("api_url", ""),
+                api_key=self.ai_settings.get("api_key", ""),
+                prompt=self.ai_settings.get("prompt", ""),
+            )
+            result = gen.generate(self.image_path)
+            self.finished.emit(result)
         except Exception as e:
             self.error.emit(str(e))
 
@@ -163,17 +187,6 @@ class ControlPanel(QWidget):
 
         self.combo_style = QComboBox()
         style_layout.addWidget(self.combo_style)
-
-        self.ai_options = QWidget()
-        ai_layout = QVBoxLayout(self.ai_options)
-        ai_layout.setContentsMargins(0, 4, 0, 0)
-        self.lbl_api = QLabel()
-        self.lbl_api.setStyleSheet("font-size: 12px;")
-        ai_layout.addWidget(self.lbl_api)
-        self.combo_api = QComboBox()
-        ai_layout.addWidget(self.combo_api)
-        self.ai_options.setVisible(False)
-        style_layout.addWidget(self.ai_options)
 
         self.combo_style.currentIndexChanged.connect(self._on_style_changed)
 
@@ -316,49 +329,6 @@ class ControlPanel(QWidget):
         self.combo_draw_button = QComboBox()
         paint_layout.addWidget(self.combo_draw_button)
 
-        # 热键配置
-        self.grp_hotkeys = QGroupBox()
-        hotkey_layout = QVBoxLayout()
-
-        self.lbl_start_hotkey = QLabel()
-        row_hot_start = QHBoxLayout()
-        row_hot_start.addWidget(self.lbl_start_hotkey)
-        self.key_start = QKeySequenceEdit(QKeySequence("F5"))
-        self.key_start.setMaximumWidth(140)
-        row_hot_start.addStretch()
-        row_hot_start.addWidget(self.key_start)
-        hotkey_layout.addLayout(row_hot_start)
-
-        self.lbl_calib_start = QLabel()
-        row_hot_c1 = QHBoxLayout()
-        row_hot_c1.addWidget(self.lbl_calib_start)
-        self.key_calib_start = QKeySequenceEdit(QKeySequence("F7"))
-        self.key_calib_start.setMaximumWidth(140)
-        row_hot_c1.addStretch()
-        row_hot_c1.addWidget(self.key_calib_start)
-        hotkey_layout.addLayout(row_hot_c1)
-
-        self.lbl_calib_end = QLabel()
-        row_hot_c2 = QHBoxLayout()
-        row_hot_c2.addWidget(self.lbl_calib_end)
-        self.key_calib_end = QKeySequenceEdit(QKeySequence("F8"))
-        self.key_calib_end.setMaximumWidth(140)
-        row_hot_c2.addStretch()
-        row_hot_c2.addWidget(self.key_calib_end)
-        hotkey_layout.addLayout(row_hot_c2)
-
-        self.lbl_abort_hotkey = QLabel()
-        row_hot_abort = QHBoxLayout()
-        row_hot_abort.addWidget(self.lbl_abort_hotkey)
-        self.key_abort = QKeySequenceEdit(QKeySequence("Esc"))
-        self.key_abort.setMaximumWidth(140)
-        row_hot_abort.addStretch()
-        row_hot_abort.addWidget(self.key_abort)
-        hotkey_layout.addLayout(row_hot_abort)
-
-        self.grp_hotkeys.setLayout(hotkey_layout)
-        paint_layout.addWidget(self.grp_hotkeys)
-
         # 进度条
         self.progress_bar = QProgressBar()
         self.progress_bar.setValue(0)
@@ -383,10 +353,7 @@ class ControlPanel(QWidget):
         self.grp_paint.setLayout(paint_layout)
         layout.addWidget(self.grp_paint)
 
-        # 热键刷新
-        for editor in (self.key_start, self.key_calib_start, self.key_calib_end, self.key_abort):
-            editor.keySequenceChanged.connect(lambda _seq: self._refresh_hotkeys())
-            editor.keySequenceChanged.connect(self._save_hotkey_settings)
+        # 初始化热键快捷方式
         self._refresh_hotkeys()
 
         layout.addStretch()
@@ -417,12 +384,6 @@ class ControlPanel(QWidget):
         self.combo_style.setCurrentIndex(max(0, current_idx))
         self.combo_style.blockSignals(False)
 
-        self.lbl_api.setText(i18n.t("lbl_api"))
-        self.combo_api.clear()
-        self.combo_api.addItems([
-            i18n.t("api_dalle"), i18n.t("api_sd"), i18n.t("api_custom")
-        ])
-
         self.grp_params.setTitle(i18n.t("group_params"))
         self.lbl_thickness.setText(i18n.t("lbl_thickness"))
         self.lbl_contrast.setText(i18n.t("lbl_contrast"))
@@ -447,11 +408,6 @@ class ControlPanel(QWidget):
         index = self.combo_draw_button.findData(current_button if current_button else "right")
         self.combo_draw_button.setCurrentIndex(max(0, index))
         self.combo_draw_button.blockSignals(False)
-        self.grp_hotkeys.setTitle(i18n.t("group_hotkeys"))
-        self.lbl_start_hotkey.setText(i18n.t("lbl_start_hotkey"))
-        self.lbl_calib_start.setText(i18n.t("lbl_calib_start"))
-        self.lbl_calib_end.setText(i18n.t("lbl_calib_end"))
-        self.lbl_abort_hotkey.setText(i18n.t("lbl_abort_hotkey"))
         self.btn_start_paint.setText(i18n.t("btn_start_paint"))
         self.btn_stop_paint.setText(i18n.t("btn_stop_paint"))
 
@@ -467,7 +423,10 @@ class ControlPanel(QWidget):
             self.text_panel.setVisible(True)
 
     def _refresh_hotkeys(self):
-        seq = self.key_start.keySequence()
+        """根据设置文件中的快捷键配置更新快捷方式。"""
+        hotkeys = self._get_hotkey_settings()
+        start_seq = QKeySequence(hotkeys.get("start", "F5"))
+
         if self._start_shortcut:
             try:
                 self._start_shortcut.activated.disconnect()
@@ -477,57 +436,61 @@ class ControlPanel(QWidget):
             self._start_shortcut.deleteLater()
             self._start_shortcut = None
 
-        if not seq.isEmpty():
-            self._start_shortcut = QShortcut(seq, self)
+        if not start_seq.isEmpty():
+            self._start_shortcut = QShortcut(start_seq, self)
             self._start_shortcut.activated.connect(self._on_start_painting)
 
-    def _hotkey_value(self, editor: QKeySequenceEdit, fallback: str) -> str:
-        seq = editor.keySequence()
-        if seq.isEmpty():
-            return fallback
-        # keyboard 库使用小写，且去掉空格
-        return seq.toString().replace(" ", "").lower() or fallback
-
-    def _load_hotkey_settings(self):
-        """从 settings.json 加载快捷键配置并应用到 UI。"""
-        if not os.path.exists(SETTINGS_PATH):
-            return
+    def _get_hotkey_settings(self) -> dict:
+        """从 settings.json 读取快捷键配置。"""
+        defaults = {
+            "start": "F5",
+            "calib_start": "F7",
+            "calib_end": "F8",
+            "abort": "Esc",
+        }
+        if not os.path.isfile(SETTINGS_PATH):
+            return defaults
         try:
             with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
                 settings = json.load(f)
             hotkeys = settings.get("hotkeys", {})
-            mapping = {
-                "start": self.key_start,
-                "calib_start": self.key_calib_start,
-                "calib_end": self.key_calib_end,
-                "abort": self.key_abort,
-            }
-            for key, editor in mapping.items():
+            for key in defaults:
                 if key in hotkeys and hotkeys[key]:
-                    editor.setKeySequence(QKeySequence(hotkeys[key]))
+                    defaults[key] = hotkeys[key]
         except (json.JSONDecodeError, IOError, KeyError):
             pass
+        return defaults
 
-    def _save_hotkey_settings(self, _seq=None):
-        """将当前快捷键配置保存到 settings.json。"""
-        settings = {}
-        if os.path.exists(SETTINGS_PATH):
-            try:
-                with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
-                    settings = json.load(f)
-            except (json.JSONDecodeError, IOError):
-                pass
-        settings["hotkeys"] = {
-            "start": self.key_start.keySequence().toString(),
-            "calib_start": self.key_calib_start.keySequence().toString(),
-            "calib_end": self.key_calib_end.keySequence().toString(),
-            "abort": self.key_abort.keySequence().toString(),
+    def _hotkey_value_from_settings(self, key: str, fallback: str) -> str:
+        """从设置中获取热键值（小写，供 keyboard 库使用）。"""
+        hotkeys = self._get_hotkey_settings()
+        val = hotkeys.get(key, fallback)
+        return val.replace(" ", "").lower() if val else fallback
+
+    def _get_ai_settings(self) -> dict:
+        """从 settings.json 读取 AI 配置。"""
+        defaults = {
+            "provider": "openai",
+            "api_url": "",
+            "api_key": "",
+            "prompt": "",
         }
+        if not os.path.isfile(SETTINGS_PATH):
+            return defaults
         try:
-            with open(SETTINGS_PATH, "w", encoding="utf-8") as f:
-                json.dump(settings, f, ensure_ascii=False, indent=2)
-        except IOError:
+            with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
+                settings = json.load(f)
+            ai = settings.get("ai", {})
+            for key in defaults:
+                if key in ai:
+                    defaults[key] = ai[key]
+        except (json.JSONDecodeError, IOError, KeyError):
             pass
+        return defaults
+
+    def _load_hotkey_settings(self):
+        """从 settings.json 加载快捷键并刷新快捷方式。"""
+        self._refresh_hotkeys()
 
     def _on_text_rendered(self, path: str):
         """写字模式下，文字渲染完成后当作线稿数据"""
@@ -546,15 +509,54 @@ class ControlPanel(QWidget):
         self.sketch_generated.emit(path)
         self.status_message.emit(i18n.t("status_generate_done"))
 
-    def load_sketch_from_history(self, path: str, auto_start: bool = False):
-        """从历史记录加载线稿，并可选择直接开始绘画。"""
+    def load_sketch_from_history(self, entry: dict, auto_start: bool = False):
+        """从历史记录加载线稿并还原界面参数。"""
+        path = entry.get("sketch_path", "")
         if not path or not os.path.exists(path):
             return
         self._sketch_data = path
         self.btn_save.setEnabled(True)
         self.btn_start_paint.setEnabled(True)
+
+        # 还原原始图片
+        source_path = entry.get("source_path", "")
+        if source_path and os.path.isfile(source_path):
+            self._image_path = source_path
+            filename = os.path.basename(source_path)
+            self.lbl_filename.setText(f"📄 {filename}")
+            pixmap = QPixmap(source_path)
+            if not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    self.lbl_thumbnail.size(),
+                    Qt.KeepAspectRatio,
+                    Qt.SmoothTransformation,
+                )
+                self.lbl_thumbnail.setPixmap(scaled)
+            self.btn_generate.setEnabled(True)
+            self.image_selected.emit(source_path)
+
+        # 还原线稿风格
+        style = entry.get("style", "")
+        if style:
+            for idx_s, (key, i18n_key) in enumerate(self.STYLE_KEYS):
+                translated = i18n.t(i18n_key)
+                if style == translated or style == key:
+                    self.combo_style.setCurrentIndex(idx_s)
+                    break
+
+        # 还原参数
+        params = entry.get("params", {})
+        if "thickness" in params:
+            self.slider_thickness.setValue(int(params["thickness"]))
+        if "contrast" in params:
+            self.slider_contrast.setValue(int(params["contrast"]))
+        if "threshold" in params:
+            self.slider_threshold.setValue(int(params["threshold"]))
+        if "invert" in params:
+            self.chk_invert.setChecked(bool(params["invert"]))
+
         self.sketch_generated.emit(path)
-        self.status_message.emit(i18n.t("history_loaded"))
+        self.status_message.emit(i18n.t("history_restored"))
         if auto_start:
             self._on_start_painting()
 
@@ -566,8 +568,7 @@ class ControlPanel(QWidget):
     # ──────────── 槽函数 ────────────
 
     def _on_style_changed(self, index):
-        style_key = self.combo_style.currentData()
-        self.ai_options.setVisible(style_key == "ai")
+        pass  # AI 设置已移至设置对话框
 
     def _on_select_image(self):
         path, _ = QFileDialog.getOpenFileName(
@@ -619,7 +620,11 @@ class ControlPanel(QWidget):
         self.btn_generate.setText(i18n.t("btn_generating"))
         self.status_message.emit(i18n.t("status_generating"))
 
-        self._sketch_worker = SketchWorker(self._image_path, style_key, params)
+        if style_key == "ai":
+            ai_settings = self._get_ai_settings()
+            self._sketch_worker = AISketchWorker(self._image_path, ai_settings)
+        else:
+            self._sketch_worker = SketchWorker(self._image_path, style_key, params)
         self._sketch_worker.finished.connect(
             lambda result: self._on_sketch_done(result, style_key, params)
         )
@@ -673,9 +678,9 @@ class ControlPanel(QWidget):
             "speed": self.slider_speed.value(),
             "draw_button": self.combo_draw_button.currentData() or "right",
             "mode": self._paint_mode,
-            "calibrate_start_key": self._hotkey_value(self.key_calib_start, "f7"),
-            "calibrate_end_key": self._hotkey_value(self.key_calib_end, "f8"),
-            "abort_key": self._hotkey_value(self.key_abort, "esc"),
+            "calibrate_start_key": self._hotkey_value_from_settings("calib_start", "f7"),
+            "calibrate_end_key": self._hotkey_value_from_settings("calib_end", "f8"),
+            "abort_key": self._hotkey_value_from_settings("abort", "esc"),
         }
 
         self.btn_start_paint.setEnabled(False)

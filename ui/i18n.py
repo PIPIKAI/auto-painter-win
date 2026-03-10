@@ -139,6 +139,30 @@ TRANSLATIONS = {
         "lbl_sketch_title": "✏️ 线稿预览",
         "placeholder_select": "请从左侧选择一张图片",
         "placeholder_sketch": "生成线稿后在此预览",
+
+        # 设置对话框
+        "menu_settings": "设置(&S)",
+        "settings_title": "⚙️ 设置",
+        "settings_tab_hotkeys": "⌨️ 快捷键",
+        "settings_tab_ai": "🤖 AI 画图",
+        "settings_save": "保存",
+        "settings_cancel": "取消",
+        "settings_saved": "设置已保存",
+
+        # AI 设置
+        "ai_provider": "AI 接口:",
+        "ai_api_url": "API 地址:",
+        "ai_api_key": "API 密钥:",
+        "ai_prompt": "生成提示词:",
+        "ai_preset_prompts": "预设提示词:",
+        "ai_select_preset": "-- 选择预设 --",
+        "ai_api_url_hint_openai": "默认: https://api.openai.com/v1/images/generations",
+        "ai_api_url_hint_sd": "默认: http://127.0.0.1:7860/sdapi/v1/img2img",
+        "ai_api_url_hint_custom": "请输入自定义接口地址",
+        "ai_prompt_placeholder": "在此输入生成提示词...",
+
+        # 历史还原
+        "history_restored": "已还原历史记录的设置和图片",
     },
 
     "en_US": {
@@ -272,6 +296,30 @@ TRANSLATIONS = {
         "lbl_sketch_title": "✏️ Sketch Preview",
         "placeholder_select": "Select an image from the left panel",
         "placeholder_sketch": "Sketch preview will appear here",
+
+        # Settings dialog
+        "menu_settings": "&Settings",
+        "settings_title": "⚙️ Settings",
+        "settings_tab_hotkeys": "⌨️ Hotkeys",
+        "settings_tab_ai": "🤖 AI Drawing",
+        "settings_save": "Save",
+        "settings_cancel": "Cancel",
+        "settings_saved": "Settings saved",
+
+        # AI settings
+        "ai_provider": "AI Provider:",
+        "ai_api_url": "API URL:",
+        "ai_api_key": "API Key:",
+        "ai_prompt": "Generation Prompt:",
+        "ai_preset_prompts": "Preset Prompts:",
+        "ai_select_preset": "-- Select Preset --",
+        "ai_api_url_hint_openai": "Default: https://api.openai.com/v1/images/generations",
+        "ai_api_url_hint_sd": "Default: http://127.0.0.1:7860/sdapi/v1/img2img",
+        "ai_api_url_hint_custom": "Enter custom API URL",
+        "ai_prompt_placeholder": "Enter your prompt here...",
+
+        # History restore
+        "history_restored": "Restored settings and images from history",
     },
 }
 

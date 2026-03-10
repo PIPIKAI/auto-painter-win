@@ -12,6 +12,7 @@ from PyQt5.QtGui import QIcon
 from ui.control_panel import ControlPanel
 from ui.preview_panel import PreviewPanel
 from ui.history_manager import HistoryPanel
+from ui.settings_dialog import SettingsDialog
 from ui.styles import GLOBAL_STYLE
 from ui.i18n import i18n
 
@@ -80,6 +81,13 @@ class MainWindow(QMainWindow):
         self.about_action = QAction("", self)
         self.about_action.triggered.connect(self._on_about)
         self.help_menu.addAction(self.about_action)
+
+        # 设置菜单项（添加到文件菜单分隔符之前）
+        self.settings_action = QAction("", self)
+        self.settings_action.setShortcut("Ctrl+,")
+        self.settings_action.triggered.connect(self._on_open_settings)
+        self.file_menu.insertAction(self.exit_action, self.settings_action)
+        self.file_menu.insertSeparator(self.exit_action)
 
     # ──────────── UI 布局 ────────────
 
@@ -153,6 +161,7 @@ class MainWindow(QMainWindow):
         self.file_menu.setTitle(i18n.t("menu_file"))
         self.open_action.setText(i18n.t("menu_open"))
         self.save_action.setText(i18n.t("menu_save"))
+        self.settings_action.setText(i18n.t("menu_settings"))
         self.exit_action.setText(i18n.t("menu_exit"))
 
         self.lang_menu.setTitle(i18n.t("menu_language"))
@@ -204,11 +213,11 @@ class MainWindow(QMainWindow):
             3000
         )
 
-    def _on_history_loaded(self, path: str):
-        self.control_panel.load_sketch_from_history(path)
+    def _on_history_loaded(self, entry: dict):
+        self.control_panel.load_sketch_from_history(entry)
 
     def _on_history_paint(self, path: str):
-        self.control_panel.load_sketch_from_history(path, auto_start=True)
+        self.control_panel.load_sketch_from_history({"sketch_path": path}, auto_start=True)
 
     def _on_open_image(self):
         self.control_panel._on_select_image()
@@ -218,3 +227,13 @@ class MainWindow(QMainWindow):
 
     def _on_about(self):
         QMessageBox.about(self, i18n.t("about_title"), i18n.t("about_content"))
+
+    def _on_open_settings(self):
+        dlg = SettingsDialog(self)
+        dlg.settings_saved.connect(self._on_settings_saved)
+        dlg.exec_()
+
+    def _on_settings_saved(self):
+        """设置保存后刷新控制面板的热键。"""
+        self.control_panel._refresh_hotkeys()
+        self.statusBar().showMessage(i18n.t("settings_saved"))

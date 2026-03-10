@@ -214,3 +214,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# AutoPainter data
+out_sketch/
+history/
+settings.json

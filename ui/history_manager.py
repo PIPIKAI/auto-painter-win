@@ -16,9 +16,9 @@ from PyQt5.QtCore import Qt, pyqtSignal, QSize
 from PyQt5.QtGui import QPixmap, QCursor
 
 from ui.i18n import i18n
+from ui.app_paths import HISTORY_DIR
 
-# 历史文件存储目录
-HISTORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "history")
+
 HISTORY_INDEX = os.path.join(HISTORY_DIR, "index.json")
 
 
@@ -148,7 +148,7 @@ class HistoryCard(QFrame):
 class HistoryPanel(QWidget):
     """历史记录面板 - 横向滚动展示"""
 
-    sketch_loaded = pyqtSignal(str)        # 加载线稿路径
+    sketch_loaded = pyqtSignal(dict)       # 加载完整历史条目
     sketch_paint = pyqtSignal(str)         # 直接绘画
     status_message = pyqtSignal(str)
 
@@ -268,6 +268,15 @@ class HistoryPanel(QWidget):
         else:
             saved_path = sketch_path
 
+        # 复制原始图片到 history 目录
+        saved_source = ""
+        if source_path and os.path.isfile(source_path):
+            src_ext = os.path.splitext(source_path)[1] or ".png"
+            src_name = f"source_{safe_name}{src_ext}"
+            saved_source = os.path.join(HISTORY_DIR, src_name)
+            if source_path != saved_source:
+                shutil.copy2(source_path, saved_source)
+
         # 生成缩略图
         thumb_name = f"thumb_{safe_name}.png"
         thumb_path = os.path.join(HISTORY_DIR, thumb_name)
@@ -280,7 +289,7 @@ class HistoryPanel(QWidget):
 
         entry = {
             "sketch_path": saved_path,
-            "source_path": source_path,
+            "source_path": saved_source,
             "thumbnail": thumb_path,
             "style": style,
             "params": params,
@@ -294,7 +303,7 @@ class HistoryPanel(QWidget):
     def _on_load(self, entry: dict):
         path = entry.get("sketch_path", "")
         if os.path.exists(path):
-            self.sketch_loaded.emit(path)
+            self.sketch_loaded.emit(entry)
             self.status_message.emit(i18n.t("history_loaded"))
 
     def _on_paint(self, entry: dict):
@@ -316,8 +325,8 @@ class HistoryPanel(QWidget):
             self.status_message.emit(i18n.t("history_exported", path))
 
     def _on_delete(self, entry: dict):
-        # 删除文件
-        for key in ("sketch_path", "thumbnail"):
+        # 删除文件（线稿、缩略图、原始图片副本）
+        for key in ("sketch_path", "thumbnail", "source_path"):
             p = entry.get(key, "")
             if p and os.path.exists(p) and HISTORY_DIR in p:
                 try:
@@ -339,7 +348,7 @@ class HistoryPanel(QWidget):
         if reply == QMessageBox.Yes:
             # 删除所有文件
             for entry in self._entries:
-                for key in ("sketch_path", "thumbnail"):
+                for key in ("sketch_path", "thumbnail", "source_path"):
                     p = entry.get(key, "")
                     if p and os.path.exists(p) and HISTORY_DIR in p:
                         try:
