@@ -223,7 +223,7 @@ class HistoryPanel(QWidget):
         while self.cards_layout.count():
             item = self.cards_layout.takeAt(0)
             widget = item.widget()
-            if widget:
+            if widget and widget is not self.lbl_empty:
                 widget.deleteLater()
 
         if not self._entries:
