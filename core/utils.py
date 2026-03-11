@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import os
 
 def imread_unicode(path: str, flags=cv2.IMREAD_COLOR):
     """
@@ -9,6 +10,34 @@ def imread_unicode(path: str, flags=cv2.IMREAD_COLOR):
     img = cv2.imdecode(data, flags)            # 让 OpenCV 从内存解码
     return img
 
+def imwrite_unicode(path, img, params=None):
+    """
+    支持中文路径的 imwrite
+
+    :param path: 保存路径 (支持中文)
+    :param img: numpy 图像
+    :param params: 编码参数 (和 cv2.imwrite 一样)
+    :return: True/False
+    """
+    try:
+        ext = os.path.splitext(path)[1]
+        if ext == "":
+            raise ValueError("文件必须包含扩展名")
+
+        if params is None:
+            result, buf = cv2.imencode(ext, img)
+        else:
+            result, buf = cv2.imencode(ext, img, params)
+
+        if result:
+            buf.tofile(path)
+            return True
+        return False
+
+    except Exception as e:
+        print("imwrite_unicode error:", e)
+        return False
+    
 def map_point(x, y, img_w, img_h, canvas_left, canvas_top, canvas_w, canvas_h, padding=2):
     sx = canvas_left + padding + (x / (img_w - 1)) * (canvas_w - 2 * padding)
     sy = canvas_top + padding + (y / (img_h - 1)) * (canvas_h - 2 * padding)

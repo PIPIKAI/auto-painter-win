@@ -4,7 +4,7 @@ from typing import Dict, Optional, Tuple
 import cv2
 import numpy as np
 
-from core.utils import imread_unicode, resize_to_max_side
+from core.utils import imread_unicode, resize_to_max_side, imwrite_unicode
 
 
 class SketchGenerator:
@@ -52,7 +52,7 @@ class SketchGenerator:
         out_dir = os.path.join(os.path.dirname(img_path), "out_sketch")
         os.makedirs(out_dir, exist_ok=True)
         preview_path = os.path.join(out_dir, "sketch.png")
-        cv2.imwrite(preview_path, sketch)
+        imwrite_unicode(preview_path, sketch)
         print(f"线稿预览已保存：{preview_path}")
 
         return preview_path

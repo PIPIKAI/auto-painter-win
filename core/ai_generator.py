@@ -13,7 +13,7 @@ from urllib.error import URLError, HTTPError
 import cv2
 import numpy as np
 
-from core.utils import imread_unicode
+from core.utils import imread_unicode, imwrite_unicode
 
 
 # ─────────── 预设 Prompt 列表 ───────────
@@ -124,7 +124,7 @@ class AIGenerator:
             raise RuntimeError("AI 返回的图片无法解码，请检查接口配置。")
 
         _, bw = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
-        cv2.imwrite(out_path, bw)
+        imwrite_unicode(out_path, bw)
         return out_path
 
     # ──────────── OpenAI ────────────
