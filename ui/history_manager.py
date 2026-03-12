@@ -146,15 +146,20 @@ class HistoryCard(QFrame):
     def contextMenuEvent(self, event):
         menu = QMenu(self)
 
+        # 创建菜单项
         act_load = menu.addAction(i18n.t("history_menu_load"))
         act_paint = menu.addAction(i18n.t("history_menu_paint"))
         menu.addSeparator()
         act_export = menu.addAction(i18n.t("history_menu_export"))
         menu.addSeparator()
         act_delete = menu.addAction(i18n.t("history_menu_delete"))
-        act_delete.setStyleSheet("color: #d73a49;")
 
+        # 设置QMenu的样式，改变所有QAction的文字颜色
+        menu.setStyleSheet("QAction { color: #d73a49; }")
+
+        # 显示菜单并获取用户选择
         action = menu.exec_(QCursor.pos())
+        # 根据用户选择的动作触发相应的信号
         if action == act_load:
             self.double_clicked.emit(self.entry)
         elif action == act_paint:
