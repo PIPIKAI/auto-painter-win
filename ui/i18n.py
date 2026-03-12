@@ -39,7 +39,8 @@ TRANSLATIONS = {
             "<p><b>快速开始：</b></p>"
             "<ul>"
             "<li>可在“设置”中修改绘图快捷键、AI 接口等偏好。</li>"
-            "<li>基本流程：选择图片 → 生成线稿 → 记录画布左上/右下角 → 开始绘画，按停止/中断键可随时终止。</li>"
+            "<li>基本流程：选择图片 → 生成线稿 → 记录画布左上/右下角 → 开始绘画。</li>"
+            "<li>绘制过程中可随时按停止/中断键终止。</li>"
             "</ul>"
         ),
         "welcome_hint": "点击下方“我已知晓”后方可继续使用。",
@@ -213,7 +214,8 @@ TRANSLATIONS = {
             "<p><b>Quick tips:</b></p>"
             "<ul>"
             "<li>Adjust drawing hotkeys and AI preferences in Settings.</li>"
-            "<li>Basic flow: choose an image → generate sketch → record canvas top-left/bottom-right → start painting; press Stop/Abort to cancel anytime.</li>"
+            "<li>Basic flow: choose an image → generate sketch → record canvas top-left/bottom-right → start painting.</li>"
+            "<li>You can press Stop/Abort at any time to cancel painting.</li>"
             "</ul>"
         ),
         "welcome_hint": "Please confirm below to continue using the app.",
