@@ -75,7 +75,7 @@ class AISketchWorker(QThread):
 class PaintWorker(QThread):
     """自动绘画工作线程"""
     progress = pyqtSignal(int)
-    status = pyqtSignal(str)
+    status = pyqtSignal(str,str,int)
     finished = pyqtSignal()
     error = pyqtSignal(str)
 
@@ -117,7 +117,7 @@ class ControlPanel(QWidget):
     sketch_generated = pyqtSignal(object)
     painting_progress = pyqtSignal(int)
     status_message = pyqtSignal(str)
-    notification_message = pyqtSignal(str)
+    notification_message = pyqtSignal(str,str,int)
 
     # 新增：通知主窗口保存历史
     history_entry = pyqtSignal(str, str, str, dict)  # sketch_path, source_path, style, params
@@ -786,6 +786,6 @@ class ControlPanel(QWidget):
             self.btn_stop_paint.setEnabled(False)
             self.status_message.emit(i18n.t("status_painting_stopped"))
 
-    def _on_paint_status(self, message: str):
+    def _on_paint_status(self, title: str, message: str,msec: int):
         self.status_message.emit(message)
-        self.notification_message.emit(message)
+        self.notification_message.emit(title,message, msec)

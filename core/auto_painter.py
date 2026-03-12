@@ -140,7 +140,9 @@ def calibrate_canvas_rect(
     )
     if status_callback:
         status_callback(
-            f"请移动鼠标到画布左上角后按 {config.calibrate_start_key.upper()} 记录"
+            "画布校准",
+            f"请移动鼠标到画布左上角后按 {config.calibrate_start_key.upper()} 设置【画布左上角】",
+            3000
         )
 
     p1 = None
@@ -152,18 +154,21 @@ def calibrate_canvas_rect(
         if keyboard.is_pressed(config.calibrate_start_key):
             p1 = pyautogui.position()
             print(f"已记录左上角: {p1}")
-            if status_callback:
-                status_callback(f"已记录左上角: ({p1.x}, {p1.y})")
             time.sleep(0.3)
 
+    if status_callback:
+        status_callback(
+            "画布校准",
+            f"请移动鼠标到画布右下角后按 {config.calibrate_end_key.upper()} 开始绘图",
+            3000
+        )
+        
     while p2 is None:
         if stop_checker():
             raise PaintCancelled("cancelled")
         if keyboard.is_pressed(config.calibrate_end_key):
             p2 = pyautogui.position()
             print(f"已记录右下角: {p2}")
-            if status_callback:
-                status_callback(f"已记录右下角: ({p2.x}, {p2.y})")
             time.sleep(0.3)
 
     left = min(p1.x, p2.x)
@@ -175,6 +180,12 @@ def calibrate_canvas_rect(
     height = bottom - top
 
     if width < 50 or height < 50:
+        if status_callback:
+            status_callback(
+                "画布校准",
+                f"画布区域太小，可能没选对。请重试。",
+                1000
+            )
         raise ValueError("画布区域太小，可能没选对。请重试。")
 
     return left, top, width, height
@@ -381,6 +392,13 @@ class AutoPainter:
             f"画布区域：left={canvas_rect[0]} top={canvas_rect[1]} "
             f"w={canvas_rect[2]} h={canvas_rect[3]}"
         )
+        if status_callback:
+            status_callback(
+                "提醒",
+                f"鼠标会被接管；按 {self.config.abort_key.upper()} 紧急停止。",
+                2500,
+                )
+            
 
         draw_strokes_in_paint(
             strokes,

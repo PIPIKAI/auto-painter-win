@@ -198,20 +198,20 @@ class MainWindow(QMainWindow):
             self.windowTitle(),
             i18n.t("status_painting_progress", milestone),
             QSystemTrayIcon.Information,
-            3000
+            20
         )
 
     def _update_status(self, message):
         self.statusBar().showMessage(message)
 
-    def _show_tray_message(self, message: str):
+    def _show_tray_message(self,title: str, message: str,msec: int ):
         if not self._tray_icon or not QSystemTrayIcon.isSystemTrayAvailable():
             return
         self._tray_icon.showMessage(
-            self.windowTitle(),
+            title,
             message,
             QSystemTrayIcon.Information,
-            3000
+            msec
         )
 
     def _on_history_loaded(self, entry: dict):
