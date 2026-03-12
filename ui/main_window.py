@@ -206,8 +206,8 @@ class MainWindow(QMainWindow):
     def _update_status(self, message):
         self.statusBar().showMessage(message)
 
-    def showEvent(self, event):
-        super().showEvent(event)
+    def show(self):
+        super().show()
         if not self._notice_dialog_triggered:
             self._show_first_launch_notice()
 

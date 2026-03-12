@@ -45,7 +45,7 @@ TRANSLATIONS = {
         ),
         "welcome_hint": "点击下方“我已知晓”后方可继续使用。",
         "welcome_confirm": "我已知晓",
-        # “{}” 占位符会被剩余秒数替换
+        # “{}” 是格式化占位符，会被剩余秒数替换
         "welcome_confirm_countdown": "我已知晓 ({})",
 
         # 状态栏
@@ -221,7 +221,7 @@ TRANSLATIONS = {
         ),
         "welcome_hint": "Please confirm below to continue using the app.",
         "welcome_confirm": "Got it",
-        # "{}" placeholder is replaced with remaining seconds
+        # \"{}\" is a format placeholder that will be replaced with remaining seconds
         "welcome_confirm_countdown": "Got it ({})",
 
         # Status bar
