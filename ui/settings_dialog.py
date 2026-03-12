@@ -1,21 +1,23 @@
 """
 设置对话框
-包含快捷键设置和 AI 画图设置
+包含快捷键设置、AI 画图设置、通知设置和关于信息
 """
 import json
 import os
+import webbrowser
 
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget,
     QGroupBox, QLabel, QLineEdit, QComboBox,
     QPushButton, QTextEdit, QKeySequenceEdit,
-    QWidget, QFormLayout, QMessageBox,
+    QWidget, QFormLayout, QMessageBox, QCheckBox,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QKeySequence
 
 from ui.i18n import i18n
 from ui.app_paths import SETTINGS_PATH, ensure_data_dirs
+from ui.version import APP_VERSION
 from core.ai_generator import PRESET_PROMPTS
 
 
@@ -128,6 +130,67 @@ class SettingsDialog(QDialog):
         ai_layout.addStretch()
         self.tabs.addTab(ai_tab, "")
 
+        # ═══ Tab 3: 通用 / 关于 ═══
+        general_tab = QWidget()
+        gen_layout = QVBoxLayout(general_tab)
+
+        # 通知设置
+        self.grp_notifications = QGroupBox()
+        notif_layout = QVBoxLayout()
+
+        self.chk_notify_progress = QCheckBox()
+        self.chk_notify_progress.setChecked(True)
+        self.lbl_notify_progress_hint = QLabel()
+        self.lbl_notify_progress_hint.setStyleSheet("color: #888; font-size: 12px; margin-left: 22px;")
+        notif_layout.addWidget(self.chk_notify_progress)
+        notif_layout.addWidget(self.lbl_notify_progress_hint)
+
+        notif_layout.addSpacing(8)
+
+        self.chk_notify_operations = QCheckBox()
+        self.chk_notify_operations.setChecked(True)
+        self.lbl_notify_operations_hint = QLabel()
+        self.lbl_notify_operations_hint.setStyleSheet("color: #888; font-size: 12px; margin-left: 22px;")
+        notif_layout.addWidget(self.chk_notify_operations)
+        notif_layout.addWidget(self.lbl_notify_operations_hint)
+
+        self.grp_notifications.setLayout(notif_layout)
+        gen_layout.addWidget(self.grp_notifications)
+
+        # 关于
+        self.grp_about = QGroupBox()
+        about_layout = QVBoxLayout()
+
+        self.lbl_about_version = QLabel()
+        self.lbl_about_version.setStyleSheet("font-size: 14px; font-weight: bold;")
+        about_layout.addWidget(self.lbl_about_version)
+
+        self.lbl_about_desc = QLabel()
+        self.lbl_about_desc.setWordWrap(True)
+        self.lbl_about_desc.setStyleSheet("color: #555;")
+        about_layout.addWidget(self.lbl_about_desc)
+
+        about_btn_row = QHBoxLayout()
+        self.btn_homepage = QPushButton()
+        self.btn_homepage.clicked.connect(
+            lambda: webbrowser.open("https://github.com/PIPIKAI/auto-painter-win")
+        )
+        about_btn_row.addWidget(self.btn_homepage)
+
+        self.btn_check_update = QPushButton()
+        self.btn_check_update.setObjectName("primaryButton")
+        self.btn_check_update.clicked.connect(self._on_check_update)
+        about_btn_row.addWidget(self.btn_check_update)
+
+        about_btn_row.addStretch()
+        about_layout.addLayout(about_btn_row)
+
+        self.grp_about.setLayout(about_layout)
+        gen_layout.addWidget(self.grp_about)
+
+        gen_layout.addStretch()
+        self.tabs.addTab(general_tab, "")
+
         layout.addWidget(self.tabs)
 
         # ═══ 底部按钮 ═══
@@ -151,6 +214,7 @@ class SettingsDialog(QDialog):
         self.setWindowTitle(i18n.t("settings_title"))
         self.tabs.setTabText(0, i18n.t("settings_tab_hotkeys"))
         self.tabs.setTabText(1, i18n.t("settings_tab_ai"))
+        self.tabs.setTabText(2, i18n.t("settings_tab_general"))
 
         self.grp_hotkeys.setTitle(i18n.t("group_hotkeys"))
         self.lbl_start_hotkey.setText(i18n.t("lbl_start_hotkey"))
@@ -191,6 +255,20 @@ class SettingsDialog(QDialog):
         self.lbl_prompt.setText(i18n.t("ai_prompt"))
         self.edit_prompt.setPlaceholderText(i18n.t("ai_prompt_placeholder"))
 
+        # 通知设置
+        self.grp_notifications.setTitle(i18n.t("group_notifications"))
+        self.chk_notify_progress.setText(i18n.t("notify_paint_progress"))
+        self.lbl_notify_progress_hint.setText(i18n.t("notify_paint_progress_hint"))
+        self.chk_notify_operations.setText(i18n.t("notify_operation_tips"))
+        self.lbl_notify_operations_hint.setText(i18n.t("notify_operation_tips_hint"))
+
+        # 关于
+        self.grp_about.setTitle(i18n.t("group_about"))
+        self.lbl_about_version.setText(i18n.t("about_version_label", APP_VERSION))
+        self.lbl_about_desc.setText(i18n.t("about_description"))
+        self.btn_homepage.setText(i18n.t("about_homepage"))
+        self.btn_check_update.setText(i18n.t("about_check_update"))
+
         self.btn_save.setText(i18n.t("settings_save"))
         self.btn_cancel.setText(i18n.t("settings_cancel"))
 
@@ -209,6 +287,10 @@ class SettingsDialog(QDialog):
         prompt_text = self.combo_preset.currentData()
         if prompt_text:
             self.edit_prompt.setPlainText(prompt_text)
+
+    def _on_check_update(self):
+        from ui.update_checker import check_for_updates
+        check_for_updates(self, silent=False)
 
     # ──────────── 加载 / 保存 ────────────
 
@@ -243,6 +325,15 @@ class SettingsDialog(QDialog):
         self.edit_api_key.setText(ai.get("api_key", ""))
         self.edit_prompt.setPlainText(ai.get("prompt", ""))
 
+        # 通知设置
+        notifications = settings.get("notifications", {})
+        self.chk_notify_progress.setChecked(
+            notifications.get("paint_progress", True)
+        )
+        self.chk_notify_operations.setChecked(
+            notifications.get("operation_tips", True)
+        )
+
     def _on_save(self):
         ensure_data_dirs()
         # 读取已有设置（防止覆盖其他字段）
@@ -265,6 +356,10 @@ class SettingsDialog(QDialog):
             "api_url": self.edit_api_url.text().strip(),
             "api_key": self.edit_api_key.text().strip(),
             "prompt": self.edit_prompt.toPlainText().strip(),
+        }
+        settings["notifications"] = {
+            "paint_progress": self.chk_notify_progress.isChecked(),
+            "operation_tips": self.chk_notify_operations.isChecked(),
         }
 
         try:

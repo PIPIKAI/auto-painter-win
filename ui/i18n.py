@@ -26,9 +26,10 @@ TRANSLATIONS = {
         # 关于对话框
         "about_title": "关于 AutoPainter",
         "about_content": (
-            "<h3>AutoPainter v1.0</h3>"
+            "<h3>AutoPainter v{}</h3>"
             "<p>线稿生成与自动绘画工具</p>"
             "<p>支持多种线稿风格生成，并可自动控制鼠标进行绘画。</p>"
+            "<p>开源地址: <a href='https://github.com/PIPIKAI/auto-painter-win'>GitHub</a></p>"
         ),
 
         # 欢迎/免责声明
@@ -182,6 +183,28 @@ TRANSLATIONS = {
 
         # 历史还原
         "history_restored": "已还原历史记录的设置和图片",
+
+        # 更新检查
+        "update_title": "发现新版本",
+        "update_message": "发现新版本 <b>{}</b>（当前版本: {}）<br><br>是否前往下载页面？",
+        "update_download": "前往下载",
+        "update_skip": "暂不更新",
+        "update_checking": "正在检查更新...",
+        "update_latest": "当前已是最新版本",
+        "update_error": "检查更新失败: {}",
+
+        # 通知设置
+        "settings_tab_general": "🔔 通用",
+        "group_notifications": "🔔 通知设置",
+        "notify_paint_progress": "绘画进度通知",
+        "notify_paint_progress_hint": "在绘画进度达到 25%、50%、75% 时在系统托盘显示通知",
+        "notify_operation_tips": "操作提示通知",
+        "notify_operation_tips_hint": "在绘画开始/完成等操作时在系统托盘显示通知",
+        "group_about": "ℹ️ 关于",
+        "about_version_label": "版本: {}",
+        "about_homepage": "项目主页",
+        "about_check_update": "检查更新",
+        "about_description": "AutoPainter 是一款免费开源的线稿生成与自动绘画工具。",
     },
 
     "en_US": {
@@ -202,9 +225,10 @@ TRANSLATIONS = {
         # About dialog
         "about_title": "About AutoPainter",
         "about_content": (
-            "<h3>AutoPainter v1.0</h3>"
+            "<h3>AutoPainter v{}</h3>"
             "<p>Sketch generation and auto-drawing tool.</p>"
             "<p>Supports multiple sketch styles and automated mouse-controlled painting.</p>"
+            "<p>Source: <a href='https://github.com/PIPIKAI/auto-painter-win'>GitHub</a></p>"
         ),
 
         # Welcome / disclaimer
@@ -358,6 +382,28 @@ TRANSLATIONS = {
 
         # History restore
         "history_restored": "Restored settings and images from history",
+
+        # Update check
+        "update_title": "New Version Available",
+        "update_message": "New version <b>{}</b> available (current: {})<br><br>Would you like to go to the download page?",
+        "update_download": "Go to Download",
+        "update_skip": "Skip",
+        "update_checking": "Checking for updates...",
+        "update_latest": "You are using the latest version",
+        "update_error": "Failed to check for updates: {}",
+
+        # Notification settings
+        "settings_tab_general": "🔔 General",
+        "group_notifications": "🔔 Notifications",
+        "notify_paint_progress": "Paint progress notifications",
+        "notify_paint_progress_hint": "Show tray notifications at 25%, 50%, 75% painting progress",
+        "notify_operation_tips": "Operation tips notifications",
+        "notify_operation_tips_hint": "Show tray notifications for painting start/complete events",
+        "group_about": "ℹ️ About",
+        "about_version_label": "Version: {}",
+        "about_homepage": "Homepage",
+        "about_check_update": "Check for Updates",
+        "about_description": "AutoPainter is a free, open-source sketch generation and auto-drawing tool.",
     },
 }
 

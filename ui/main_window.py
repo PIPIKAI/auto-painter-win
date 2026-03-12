@@ -16,6 +16,7 @@ from ui.settings_dialog import SettingsDialog, load_settings, save_settings
 from ui.first_launch_dialog import FirstLaunchDialog, NOTICE_VERSION
 from ui.styles import GLOBAL_STYLE
 from ui.i18n import i18n
+from ui.version import APP_VERSION
 
 
 class MainWindow(QMainWindow):
@@ -189,6 +190,10 @@ class MainWindow(QMainWindow):
     def _show_tray_progress(self, value: int):
         if not self._tray_icon or not QSystemTrayIcon.isSystemTrayAvailable():
             return
+        # 检查绘画进度通知是否启用
+        settings = load_settings()
+        if not settings.get("notifications", {}).get("paint_progress", True):
+            return
         if value < self._last_paint_progress:
             self._tray_progress_marks_shown.clear()
         self._last_paint_progress = value
@@ -214,6 +219,10 @@ class MainWindow(QMainWindow):
     def _show_tray_message(self,title: str, message: str,msec: int ):
         if not self._tray_icon or not QSystemTrayIcon.isSystemTrayAvailable():
             return
+        # 检查操作提示通知是否启用
+        settings = load_settings()
+        if not settings.get("notifications", {}).get("operation_tips", True):
+            return
         self._tray_icon.showMessage(
             title,
             message,
@@ -234,7 +243,7 @@ class MainWindow(QMainWindow):
         self.control_panel._on_save_sketch()
 
     def _on_about(self):
-        QMessageBox.about(self, i18n.t("about_title"), i18n.t("about_content"))
+        QMessageBox.about(self, i18n.t("about_title"), i18n.t("about_content", APP_VERSION))
 
     def _on_open_settings(self):
         dlg = SettingsDialog(self)
@@ -254,6 +263,7 @@ class MainWindow(QMainWindow):
         self._notice_dialog_triggered = True
         settings = load_settings()
         if settings.get("notice_ack_version") == NOTICE_VERSION:
+            self._check_for_updates()
             return
 
         dlg = FirstLaunchDialog(self)
@@ -261,5 +271,11 @@ class MainWindow(QMainWindow):
         if result == QDialog.Accepted:
             settings["notice_ack_version"] = NOTICE_VERSION
             save_settings(settings)
+            self._check_for_updates()
         else:
             self.close()
+
+    def _check_for_updates(self):
+        """启动后台线程检查 GitHub 最新版本。"""
+        from ui.update_checker import check_for_updates
+        check_for_updates(self, silent=True)
