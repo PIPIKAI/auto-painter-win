@@ -97,12 +97,19 @@ auto-painter-win/
 ├── core/
 │   ├── sketch_generator.py # 线稿生成核心
 │   ├── auto_painter.py     # 自动绘画相关逻辑
+│   ├── ai_generator.py     # AI 线稿生成
+│   ├── image_ops.py        # 图像处理后端（含无 OpenCV 降级）
+│   ├── hotkey.py           # 跨平台热键检测
+│   ├── mouseapi.py         # 跨平台鼠标控制
+│   ├── deps.py             # 运行依赖检查
 │   └── utils.py            # 图像读取与缩放等工具
 ├── ui/
 │   ├── main_window.py      # 主窗口
 │   ├── control_panel.py    # 左侧控制面板
 │   ├── preview_panel.py    # 预览面板
 │   ├── text_panel.py       # 文字模式面板
+│   ├── settings_dialog.py  # 设置对话框
+│   ├── styles.py           # 全局样式
 │   └── i18n.py             # 中英文翻译
 └── requirements.txt
 ```
