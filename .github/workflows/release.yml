@@ -14,7 +14,7 @@ jobs:
         include:
           - os: windows-latest
             artifact: auto-painter-win.exe
-          - os: macos-14
+          - os: macos-latest
             artifact: auto-painter-mac-arm64.zip
     runs-on: ${{ matrix.os }}
     steps:
