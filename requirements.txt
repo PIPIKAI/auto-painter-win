@@ -1,7 +1,5 @@
 PyQt5>=5.15
+opencv-python>=4.5
 numpy>=1.20
-Pillow>=10.0
 pyautogui>=0.9
-opencv-python>=4.5; python_version < "3.13"
-keyboard>=0.13.5; platform_system=="Windows"
-pynput>=1.7.6; platform_system!="Windows"
+keyboard>=0.13.5

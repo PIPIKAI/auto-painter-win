@@ -102,8 +102,8 @@ TRANSLATIONS = {
         # 控制面板 - 绘画控制
         "group_paint": "🖱️ 自动绘画控制",
         "lbl_paint_mode": "绘画模式:",
-        "radio_draw_sketch": "画线稿",
-        "radio_write_text": "写字",
+        "radio_draw_sketch": "🖼️ 画线稿",
+        "radio_write_text": "✍️ 写字",
         "lbl_speed": "绘画速度:",
         "lbl_draw_button": "画笔按键:",
         "draw_button_left": "左键",
@@ -161,7 +161,7 @@ TRANSLATIONS = {
 
         # 设置对话框
         "menu_settings": "设置(&S)",
-        "btn_settings_open": "设置",
+        "btn_settings_open": "⚙️ 设置",
         "settings_title": "⚙️ 设置",
         "settings_tab_hotkeys": "⌨️ 快捷键",
         "settings_tab_ai": "🤖 AI 画图",
@@ -301,8 +301,8 @@ TRANSLATIONS = {
         # Control panel - Paint control
         "group_paint": "🖱️ Auto Paint Control",
         "lbl_paint_mode": "Paint Mode:",
-        "radio_draw_sketch": "Draw Sketch",
-        "radio_write_text": "Write Text",
+        "radio_draw_sketch": "🖼️ Draw Sketch",
+        "radio_write_text": "✍️ Write Text",
         "lbl_speed": "Paint Speed:",
         "lbl_draw_button": "Draw Button:",
         "draw_button_left": "Left Button",
@@ -360,7 +360,7 @@ TRANSLATIONS = {
 
         # Settings dialog
         "menu_settings": "&Settings",
-        "btn_settings_open": "Settings",
+        "btn_settings_open": "⚙️ Settings",
         "settings_title": "⚙️ Settings",
         "settings_tab_hotkeys": "⌨️ Hotkeys",
         "settings_tab_ai": "🤖 AI Drawing",

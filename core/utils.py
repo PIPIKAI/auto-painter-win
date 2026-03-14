@@ -1,33 +1,14 @@
-import os
 import numpy as np
+import cv2
+import os
 
-from core.image_ops import decode_image_bytes, resize_image
-
-try:
-    import cv2 as _cv2  # type: ignore
-except Exception:
-    _cv2 = None
-
-_IMREAD_COLOR = _cv2.IMREAD_COLOR if _cv2 is not None else 1
-_IMREAD_GRAYSCALE = _cv2.IMREAD_GRAYSCALE if _cv2 is not None else 0
-
-def imread_unicode(path: str, flags=_IMREAD_COLOR):
+def imread_unicode(path: str, flags=cv2.IMREAD_COLOR):
     """
-    可靠读取含中文/特殊字符路径的图片。
-    统一返回 RGB（彩色）或灰度（单通道）。
+    Windows 下可靠读取含中文/特殊字符路径的图片。
     """
-    try:
-        with open(path, "rb") as f:
-            data = f.read()
-    except OSError:
-        return None
-    grayscale = flags == _IMREAD_GRAYSCALE or flags == 0
-    img = decode_image_bytes(data, grayscale=grayscale)
-    if img is None:
-        return None
-    if grayscale:
-        return img
-    return img  # RGB
+    data = np.fromfile(path, dtype=np.uint8)   # 直接按字节读文件
+    img = cv2.imdecode(data, flags)            # 让 OpenCV 从内存解码
+    return img
 
 def imwrite_unicode(path, img, params=None):
     """
@@ -43,25 +24,15 @@ def imwrite_unicode(path, img, params=None):
         if ext == "":
             raise ValueError("文件必须包含扩展名")
 
-        if _cv2 is not None:
-            out = img
-            if img.ndim == 3:
-                # RGB -> BGR for OpenCV
-                out = img[:, :, ::-1]
-            if params is None:
-                result, buf = _cv2.imencode(ext, out)
-            else:
-                result, buf = _cv2.imencode(ext, out, params)
-            if result:
-                buf.tofile(path)
-                return True
-            return False
+        if params is None:
+            result, buf = cv2.imencode(ext, img)
+        else:
+            result, buf = cv2.imencode(ext, img, params)
 
-        from PIL import Image  # type: ignore
-
-        mode = "L" if img.ndim == 2 else "RGB"
-        Image.fromarray(img, mode=mode).save(path)
-        return True
+        if result:
+            buf.tofile(path)
+            return True
+        return False
 
     except Exception as e:
         print("imwrite_unicode error:", e)
@@ -136,5 +107,5 @@ def resize_to_max_side(img_bgr, target_max_side=900, min_side=400):
 
     new_w = int(round(w * scale))
     new_h = int(round(h * scale))
-    resized = resize_image(img_bgr, new_w, new_h)
+    resized = cv2.resize(img_bgr, (new_w, new_h), interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_CUBIC)
     return resized, scale

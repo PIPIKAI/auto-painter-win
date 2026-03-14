@@ -2,17 +2,12 @@ import time
 from dataclasses import dataclass
 from typing import Callable, Iterable, Optional
 
+import cv2
 import numpy as np
+import keyboard
 import pyautogui
 
-try:
-    import cv2 as _cv2  # type: ignore
-except Exception:
-    _cv2 = None
-
 from core.mouseapi import move_abs, button_down, button_up
-from core.hotkey import is_pressed
-from core.image_ops import threshold_binary
 from core.utils import compute_aspect_fit_rect, map_point_aspect, imread_unicode
 
 
@@ -75,41 +70,11 @@ CANCEL_CHECK_INTERVAL = 0.1
 DEFAULT_SPEED_VALUE = 50
 
 
-def _scanline_paths(bin_img: np.ndarray, config: PainterConfig):
-    h, w = bin_img.shape
-    paths = []
-    stride = max(1, int(config.point_stride))
-    for y in range(h):
-        row = bin_img[y]
-        x = 0
-        while x < w:
-            if row[x] == 0:
-                x += 1
-                continue
-            start = x
-            while x + 1 < w and row[x + 1] > 0:
-                x += 1
-            end = x
-            length = end - start + 1
-            if length >= config.min_contour_len:
-                xs = np.arange(start, end + 1, stride, dtype=np.int32)
-                ys = np.full_like(xs, y)
-                pts = np.stack([xs, ys], axis=1)
-                if len(pts) >= 2:
-                    paths.append(pts)
-            x += 1
-    paths.sort(key=lambda p: -len(p))
-    return paths
-
-
 def sketch_to_contours(sketch_u8, config: PainterConfig):
     # 找白色线条的轮廓：需要白为前景
-    bin_img = threshold_binary(sketch_u8, 127, invert=False)
+    _, bin_img = cv2.threshold(sketch_u8, 127, 255, cv2.THRESH_BINARY)
 
-    if _cv2 is None:
-        return _scanline_paths(bin_img, config)
-
-    contours, _hier = _cv2.findContours(bin_img, _cv2.RETR_LIST, _cv2.CHAIN_APPROX_NONE)
+    contours, _hier = cv2.findContours(bin_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
     paths = []
     for cnt in contours:
@@ -117,7 +82,7 @@ def sketch_to_contours(sketch_u8, config: PainterConfig):
             continue
 
         # Douglas-Peucker 简化
-        approx = _cv2.approxPolyDP(cnt, epsilon=config.simplify_eps, closed=False)
+        approx = cv2.approxPolyDP(cnt, epsilon=config.simplify_eps, closed=False)
 
         pts = approx.reshape(-1, 2)
         if len(pts) < 2:
@@ -186,7 +151,7 @@ def calibrate_canvas_rect(
     while p1 is None:
         if stop_checker():
             raise PaintCancelled("cancelled")
-        if is_pressed(config.calibrate_start_key):
+        if keyboard.is_pressed(config.calibrate_start_key):
             p1 = pyautogui.position()
             print(f"已记录左上角: {p1}")
             time.sleep(0.3)
@@ -201,7 +166,7 @@ def calibrate_canvas_rect(
     while p2 is None:
         if stop_checker():
             raise PaintCancelled("cancelled")
-        if is_pressed(config.calibrate_end_key):
+        if keyboard.is_pressed(config.calibrate_end_key):
             p2 = pyautogui.position()
             print(f"已记录右下角: {p2}")
             time.sleep(0.3)
@@ -375,7 +340,7 @@ class AutoPainter:
 
     def _should_stop(self) -> bool:
         external = self._external_stop() if self._external_stop else False
-        abort_hotkey = is_pressed(self.config.abort_key)
+        abort_hotkey = keyboard.is_pressed(self.config.abort_key)
         return self._stop_requested or external or abort_hotkey
 
     def _sleep_with_cancel(self, seconds: float):

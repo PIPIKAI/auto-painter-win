@@ -10,10 +10,10 @@ from typing import Optional
 from urllib import request as urllib_request
 from urllib.error import URLError, HTTPError
 
+import cv2
 import numpy as np
 
-from core.image_ops import decode_image_bytes, threshold_binary
-from core.utils import imwrite_unicode
+from core.utils import imread_unicode, imwrite_unicode
 
 
 # ─────────── 预设 Prompt 列表 ───────────
@@ -118,11 +118,12 @@ class AIGenerator:
         out_path = os.path.join(out_dir, "ai_sketch.png")
 
         # 解码并存为灰度线稿
-        img = decode_image_bytes(result_bytes, grayscale=True)
+        arr = np.frombuffer(result_bytes, np.uint8)
+        img = cv2.imdecode(arr, cv2.IMREAD_GRAYSCALE)
         if img is None:
             raise RuntimeError("AI 返回的图片无法解码，请检查接口配置。")
 
-        bw = threshold_binary(img, 127, invert=False)
+        _, bw = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
         imwrite_unicode(out_path, bw)
         return out_path
 
