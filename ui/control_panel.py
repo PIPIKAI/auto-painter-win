@@ -158,16 +158,22 @@ class ControlPanel(QWidget):
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setSpacing(12)
+        layout.setContentsMargins(8, 12, 8, 12)
 
         # ═══ 顶部操作 ═══
-        top_row = QHBoxLayout()
+        top_bar = QWidget()
+        top_row = QHBoxLayout(top_bar)
+        top_row.setContentsMargins(0, 0, 0, 0)
         top_row.addStretch()
         self.btn_settings = QPushButton(i18n.t("btn_settings_open"))
         self.btn_settings.setObjectName("primaryButton")
         self.btn_settings.setFixedHeight(34)
+        self.btn_settings.setMinimumWidth(110)
         self.btn_settings.clicked.connect(self.settings_requested.emit)
-        top_row.addWidget(self.btn_settings)
-        layout.addLayout(top_row)
+        self.btn_settings.setToolTip(i18n.t("btn_settings_open"))
+        top_row.addWidget(self.btn_settings, alignment=Qt.AlignRight | Qt.AlignVCenter)
+        top_bar.setFixedHeight(36)
+        layout.addWidget(top_bar)
 
         # ═══ 图片选择 ═══
         self.grp_image = QGroupBox()

@@ -5,12 +5,14 @@
 GLOBAL_STYLE = """
 /* 整体 */
 QMainWindow {
-    background-color: #f5f5f5;
+    background-color: #ffffff;
 }
 
 QWidget {
-    font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    font-family: "Microsoft YaHei", "PingFang SC", "Apple Color Emoji", "Helvetica Neue", Arial, sans-serif;
     font-size: 13px;
+    color: #333;
+    background-color: #ffffff;
 }
 
 /* 分组框 */
@@ -19,16 +21,39 @@ QGroupBox {
     font-size: 13px;
     border: 1px solid #ddd;
     border-radius: 6px;
-    margin-top: 10px;
-    padding-top: 16px;
+    margin-top: 16px;
+    padding-top: 22px;
     background-color: #ffffff;
 }
 
 QGroupBox::title {
     subcontrol-origin: margin;
     subcontrol-position: top left;
-    padding: 2px 8px;
+    padding: 0 6px;
+    left: 8px;
+    top: -2px;
+    background-color: #ffffff;
     color: #333;
+}
+
+QLabel {
+    color: #333;
+}
+
+QTabBar::tab {
+    color: #333;
+}
+
+QRadioButton, QCheckBox {
+    color: #333;
+}
+
+QAbstractScrollArea::viewport {
+    background-color: #ffffff;
+}
+
+QScrollArea, QFrame, QTabWidget, QSplitter, QDialog {
+    background-color: #ffffff;
 }
 
 /* 按钮 */
@@ -161,6 +186,28 @@ QComboBox::item:selected {
 QComboBox::item {
     background-color: #fff;  /* 设置未选中项的背景色 */
     color: #000;  /* 设置未选中项的文字颜色 */
+}
+
+QLineEdit, QTextEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox {
+    background-color: #f7f7f7;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 4px 6px;
+    selection-background-color: #4a90d9;
+    selection-color: #fff;
+}
+
+QSpinBox::up-button, QSpinBox::down-button, QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+    subcontrol-origin: border;
+    background-color: #dcdcdc;
+    width: 16px;
+    border-left: 1px solid #ccc;
+}
+
+QSpinBox::up-button:hover, QSpinBox::down-button:hover,
+QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover {
+    background-color: #cfcfcf;
 }
 
 QSlider::groove:horizontal {
