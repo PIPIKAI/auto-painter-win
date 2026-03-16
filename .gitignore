@@ -219,3 +219,6 @@ __marimo__/
 out_sketch/
 history/
 settings.json
+
+# macOS
+**/.DS_Store

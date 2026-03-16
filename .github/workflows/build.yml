@@ -1,9 +1,11 @@
-name: Build and Release
+name: Build
 
 on:
   push:
-    tags:
-      - 'v*'  # 只在推送以 v 开头的标签时触发，比如 v1.0.0
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -42,15 +44,8 @@ jobs:
           pyinstaller --windowed --icon=./assets/LOGO.ico --name=auto-painter-mac main.py
           ditto -c -k --sequesterRsrc --keepParent dist/auto-painter-mac.app dist/auto-painter-mac-arm64.zip
 
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v1
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: |
-            ./dist/${{ matrix.artifact }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN  }}
-
-      - name: Upload release to GitHub
-        run: |
-          echo "Release ${GITHUB_REF} created"
+          name: ${{ matrix.artifact }}
+          path: ./dist/${{ matrix.artifact }}
