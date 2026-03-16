@@ -3,12 +3,20 @@ AutoPainter - 线稿生成与自动绘画
 主入口文件
 """
 import sys
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication
-from ui.main_window import MainWindow
+
+from core.deps import check_runtime_deps
 
 
 def main():
+    ok, msg = check_runtime_deps()
+    if not ok:
+        sys.stderr.write(msg + "\n")
+        sys.exit(1)
+
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtWidgets import QApplication
+    from ui.main_window import MainWindow
+
     # 高 DPI 适配：确保在高分辨率屏幕上正确缩放
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
